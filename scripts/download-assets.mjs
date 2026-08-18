@@ -12,6 +12,14 @@ const ASSETS = [
   {
     name: 'obstacle.glb',
     url: 'https://raw.githubusercontent.com/pmndrs/drei-assets/master/box.glb' // Or a simpler one
+  },
+  {
+    name: 'parrot.glb',
+    url: 'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/models/gltf/Parrot.glb'
+  },
+  {
+    name: 'flamingo.glb',
+    url: 'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/models/gltf/Flamingo.glb'
   }
 ];
 
