@@ -26,12 +26,7 @@ function BirdPlayer({
 }) {
   const group = useRef<THREE.Group>(null);
   
-  let model: any;
-  try {
-    model = useGLTF("/models/parrot.glb");
-  } catch(e) {
-    console.warn("Could not load parrot.glb, using fallback", e);
-  }
+  const model = useGLTF("/models/bird_fix.glb") as any;
 
   const { actions } = useAnimations(model ? model.animations : [], group);
 
@@ -83,7 +78,7 @@ function BirdPlayer({
   return (
     <group ref={group} position={[0, 2, 0]}>
       {model && model.scene ? (
-        <primitive object={model.scene} scale={0.03} position={[0, -0.5, 0]} rotation={[0, Math.PI, 0]} />
+        <primitive object={model.scene} scale={1} position={[0, -0.5, 0]} rotation={[0, Math.PI, 0]} />
       ) : (
         <Box args={[1, 0.5, 1]} position={[0, 0, 0]}>
           <meshStandardMaterial color="yellow" />

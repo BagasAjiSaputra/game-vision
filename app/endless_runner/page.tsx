@@ -54,9 +54,8 @@ export default function Home() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-gray-950 text-white overflow-hidden relative font-sans bg-[url('/assets/bg_start.png')] bg-cover bg-center">
-      {/* Dark tint backdrop overlay */}
-      <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm z-0"></div>
+    <main className="flex min-h-screen flex-col bg-[#111116] text-[#e2e2e2] overflow-hidden relative font-sans">
+      {/* Dark tint backdrop overlay is no longer needed with the solid dark background, but keeping it empty for structural integrity if used by HUD */}
 
       {/* Dynamic HUD Overlay */}
       {isPlaying && (
@@ -117,63 +116,53 @@ export default function Home() {
 
       {/* Main Menu / Game Over Screen */}
       {!isPlaying && (
-        <div className="z-20 flex flex-col items-center bg-slate-900/90 p-8 rounded-3xl backdrop-blur-xl border border-blue-500/40 shadow-[0_0_50px_rgba(59,130,246,0.2)] max-w-lg w-full mx-4">
-          <h1 className="text-4xl font-black mb-1 tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400">
-            MOTION RUNNER
-          </h1>
-          <p className="text-xs text-blue-400 font-mono tracking-widest uppercase mb-6">
-            Endless Runner Template • MediaPipe AI Control
-          </p>
+        <div className="z-20 w-full max-w-4xl mx-auto px-8 py-16 md:px-24 md:py-20 flex flex-col bg-[#111116] absolute inset-0 overflow-y-auto">
+          {/* Logo */}
+          <div className="mb-16">
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-[#e2e2e2] lowercase">
+              endless runner<span className="text-[#9d72ff]">.</span>
+            </h1>
+            <div className="w-8 h-[2px] bg-[#9d72ff] mt-2"></div>
+          </div>
 
           {isGameOver && (
-            <div className="w-full bg-gray-900/80 border border-gray-800 rounded-2xl p-4 mb-6 text-center space-y-2">
-              <h2 className="text-2xl font-bold text-red-500">GAME OVER</h2>
-              <div className="flex justify-around items-center pt-2">
-                <div>
-                  <div className="text-xs text-gray-400">SKOR</div>
-                  <div className="text-2xl font-black font-mono text-blue-400">{score}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-400">KOIN</div>
-                  <div className="text-2xl font-black font-mono text-amber-400">{coins}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-400">BEST</div>
-                  <div className="text-2xl font-black font-mono text-purple-400">{highScore}</div>
-                </div>
+            <div className="w-full flex justify-between items-center border-b border-[#222] pb-6 mb-12">
+              <div>
+                <h3 className="text-[#888] text-sm lowercase mb-1">status</h3>
+                <h2 className="text-2xl font-bold text-[#ff4b4b] lowercase">gagal</h2>
+              </div>
+              <div className="text-right">
+                <h3 className="text-[#888] text-sm lowercase mb-1">skor / koin / terbaik</h3>
+                <h2 className="text-2xl font-bold text-[#e2e2e2] lowercase">{score} / {coins} / {highScore}</h2>
               </div>
             </div>
           )}
 
-          <div className="w-full bg-gray-900/60 border border-gray-800 rounded-2xl p-4 mb-6 text-xs text-gray-300 space-y-2">
-            <p className="font-bold text-blue-300 mb-2 border-b border-gray-800 pb-1">
-              KONTROL GERAKAN (MEDIAPIPE AI):
-            </p>
-            <div className="grid grid-cols-2 gap-2 text-left">
-              <div><strong>Miring Kiri/Kanan:</strong> Pindah Jalur</div>
-              <div><strong>Jalan di Tempat:</strong> Berjalan Maju</div>
-              <div><strong>Lompat / Tangan Atas:</strong> Melompati Rintangan Rendah</div>
-              <div><strong>Jongkok / Squat:</strong> Meluncur di Bawah Rintangan Tinggi</div>
-              <div><strong>Item Magnet:</strong> Menarik Semua Koin</div>
-              <div><strong>Item Jetpack:</strong> Terbang Bebas di Udara</div>
-            </div>
+          <div className="w-full flex flex-col mb-12">
+            <h3 className="text-[#888] text-sm lowercase mb-6 border-b border-[#222] pb-2">kendali (mediapipe ai)</h3>
+            <ul className="text-[#e2e2e2] space-y-4 text-xl md:text-2xl lowercase tracking-tight">
+              <li className="flex items-center gap-4"><span className="text-[#9d72ff] text-sm">01</span> <span className="text-[#888] text-sm w-32">miring kiri/kanan</span> pindah jalur</li>
+              <li className="flex items-center gap-4"><span className="text-[#9d72ff] text-sm">02</span> <span className="text-[#888] text-sm w-32">jalan di tempat</span> maju</li>
+              <li className="flex items-center gap-4"><span className="text-[#9d72ff] text-sm">03</span> <span className="text-[#888] text-sm w-32">lompat</span> hindari rintangan rendah</li>
+              <li className="flex items-center gap-4"><span className="text-[#9d72ff] text-sm">04</span> <span className="text-[#888] text-sm w-32">jongkok</span> meluncur di bawah rintangan</li>
+            </ul>
           </div>
 
           <button
             onClick={startGame}
-            className="w-full py-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-black rounded-2xl text-xl shadow-xl transform transition hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+            className="group flex items-start gap-6 py-8 border-t border-b border-[#222] hover:border-[#444] transition-colors cursor-pointer w-full text-left mt-auto"
           >
-            {isGameOver ? "MAIN LAGI" : "MULAI GAME"}
+            <span className="text-[#9d72ff] font-mono text-xs font-medium w-6 pt-3">00</span>
+            <div className="flex-1 flex flex-col">
+               <h2 className="text-4xl md:text-6xl font-bold tracking-tight lowercase text-[#e2e2e2]">{isGameOver ? "main lagi" : "mulai game"}</h2>
+               <p className="text-[#888] text-sm mt-2 lowercase">siap kapanpun.</p>
+            </div>
+            <span className="text-[#9d72ff] text-xl opacity-50 group-hover:opacity-100 transition-all transform group-hover:translate-x-2 duration-300 pt-2">→</span>
           </button>
           
-          <div className="flex flex-col gap-2 mt-4 w-full">
-            <Link href="/bird_runner" className="text-center w-full px-6 py-3 bg-white/5 hover:bg-white/10 text-blue-300 hover:text-white rounded-xl font-medium transition-colors border border-white/10 text-sm">
-              🚀 Coba Mode Bird Runner
-            </Link>
-            <Link href="/basket_shoot" className="text-center w-full px-6 py-3 bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 hover:text-white rounded-xl font-medium transition-colors border border-orange-500/30 text-sm">
-              🏀 Coba Mode Basket Shoot
-            </Link>
-          </div>
+          <Link href="/" className="mt-8 text-[#888] text-sm hover:text-[#9d72ff] transition-colors lowercase inline-flex items-center gap-2">
+            <span>←</span> kembali ke menu
+          </Link>
         </div>
       )}
 

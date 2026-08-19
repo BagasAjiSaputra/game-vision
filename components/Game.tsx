@@ -152,22 +152,22 @@ function Player({
 }) {
   const group = useRef<THREE.Group>(null);
   
-  let model: any = null;
-  try {
-    model = useGLTF("/models/soldier.glb");
-  } catch (e) {
-    // fallback mesh used
-  }
+  const model = useGLTF("/models/character.glb") as any;
 
   const { actions } = useAnimations(model ? model.animations : [], group);
 
   useEffect(() => {
     if (!actions) return;
-    const animName = isWalking ? "Walk" : "Idle";
-    const actionToPlay = actions[animName] || actions["Run"] || Object.values(actions)[0];
+    const animName = isWalking ? "Running" : "Idle";
+    const actionToPlay = actions[animName] || actions["Walking"] || Object.values(actions)[0];
     
     if (actionToPlay) {
       actionToPlay.reset().fadeIn(0.2).play();
+      if (isWalking) {
+        actionToPlay.setEffectiveTimeScale(1.5);
+      } else {
+        actionToPlay.setEffectiveTimeScale(1.0);
+      }
       return () => { actionToPlay.fadeOut(0.2); };
     }
   }, [actions, isWalking]);
@@ -247,7 +247,7 @@ function Player({
   return (
     <group ref={group} position={[0, 0, 0]}>
       {model && model.scene ? (
-        <primitive object={model.scene} scale={1.2} position={[0, -0.5, 0]} rotation={[0, 0, 0]} />
+        <primitive object={model.scene} scale={0.4} position={[0, -0.5, 0]} rotation={[0, Math.PI, 0]} />
       ) : (
         <Box args={[1, 2, 1]} position={[0, 1, 0]}>
           <meshStandardMaterial color="#3b82f6" metalness={0.5} roughness={0.3} />

@@ -23,7 +23,7 @@ export default function BirdRunner() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-sky-900 text-white overflow-hidden relative">
+    <main className="flex min-h-screen flex-col bg-[#111116] text-[#e2e2e2] overflow-hidden relative font-sans">
       {/* UI Overlay */}
       <div className="absolute top-0 left-0 w-full p-4 z-10 flex justify-between items-center pointer-events-none">
         {isPlaying && (
@@ -35,31 +35,52 @@ export default function BirdRunner() {
 
       {/* Main Menu / Game Over Screen */}
       {!isPlaying && (
-        <div className="z-20 flex flex-col items-center bg-white/10 p-8 rounded-3xl backdrop-blur-md border border-white/20 shadow-2xl">
-          <h2 className="text-5xl font-black mb-2 text-white drop-shadow-md">
-            {isGameOver ? "CRASHED!" : "BIRD RUNNER"}
-          </h2>
-          {isGameOver && (
-            <p className="text-2xl text-blue-100 mb-6 font-bold drop-shadow">Final Score: {score}</p>
-          )}
-          <div className="bg-black/30 p-5 rounded-2xl mb-8 border border-white/10 shadow-inner">
-            <p className="text-sm text-blue-100 max-w-md text-center leading-relaxed">
-              Posisikan tubuh bagian atas (bahu & lengan) terlihat di kamera.<br/><br/>
-              <strong>Cara Terbang:</strong><br/>
-              Rentangkan Tangan Lurus ➔ Terbang Maju<br/>
-              Miringkan Badan & Lengan ke Kiri ➔ Belok Kiri<br/>
-              Miringkan Badan & Lengan ke Kanan ➔ Belok Kanan<br/>
-              Turunkan Lengan ➔ Berhenti
-            </p>
+        <div className="z-20 w-full max-w-4xl mx-auto px-8 py-16 md:px-24 md:py-20 flex flex-col bg-[#111116] absolute inset-0 overflow-y-auto">
+          {/* Logo */}
+          <div className="mb-16">
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-[#e2e2e2] lowercase">
+              bird runner<span className="text-[#9d72ff]">.</span>
+            </h1>
+            <div className="w-8 h-[2px] bg-[#9d72ff] mt-2"></div>
           </div>
+
+          {isGameOver && (
+            <div className="w-full flex justify-between items-center border-b border-[#222] pb-6 mb-12">
+              <div>
+                <h3 className="text-[#888] text-sm lowercase mb-1">status</h3>
+                <h2 className="text-2xl font-bold text-[#ff4b4b] lowercase">jatuh</h2>
+              </div>
+              <div className="text-right">
+                <h3 className="text-[#888] text-sm lowercase mb-1">skor akhir</h3>
+                <h2 className="text-2xl font-bold text-[#e2e2e2] lowercase">{score}</h2>
+              </div>
+            </div>
+          )}
+
+          <div className="w-full flex flex-col mb-12">
+            <h3 className="text-[#888] text-sm lowercase mb-6 border-b border-[#222] pb-2">kendali (mediapipe ai)</h3>
+            <p className="text-[#888] text-sm mb-4 lowercase">posisikan bahu dan lengan anda di depan kamera.</p>
+            <ul className="text-[#e2e2e2] space-y-4 text-xl md:text-2xl lowercase tracking-tight">
+              <li className="flex items-center gap-4"><span className="text-[#9d72ff] text-sm">01</span> <span className="text-[#888] text-sm w-44">rentangkan tangan</span> terbang maju</li>
+              <li className="flex items-center gap-4"><span className="text-[#9d72ff] text-sm">02</span> <span className="text-[#888] text-sm w-44">miring kiri/kanan</span> belok kiri/kanan</li>
+              <li className="flex items-center gap-4"><span className="text-[#9d72ff] text-sm">03</span> <span className="text-[#888] text-sm w-44">turunkan tangan</span> berhenti / melayang</li>
+            </ul>
+          </div>
+
           <button
             onClick={startGame}
-            className="px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-black rounded-full text-xl shadow-[0_0_15px_rgba(0,200,255,0.5)] transform transition hover:scale-105 active:scale-95 tracking-wide"
+            className="group flex items-start gap-6 py-8 border-t border-b border-[#222] hover:border-[#444] transition-colors cursor-pointer w-full text-left mt-auto"
           >
-            {isGameOver ? "FLY AGAIN" : "START FLIGHT"}
+            <span className="text-[#9d72ff] font-mono text-xs font-medium w-6 pt-3">00</span>
+            <div className="flex-1 flex flex-col">
+               <h2 className="text-4xl md:text-6xl font-bold tracking-tight lowercase text-[#e2e2e2]">{isGameOver ? "terbang lagi" : "mulai terbang"}</h2>
+               <p className="text-[#888] text-sm mt-2 lowercase">kepakkan sayapmu.</p>
+            </div>
+            <span className="text-[#9d72ff] text-xl opacity-50 group-hover:opacity-100 transition-all transform group-hover:translate-x-2 duration-300 pt-2">→</span>
           </button>
-          <Link href="/" className="mt-6 text-sm text-blue-200 hover:text-white underline underline-offset-4 decoration-blue-400">
-            Kembali ke Mode Robot
+          
+          <Link href="/" className="mt-8 text-[#888] text-sm hover:text-[#9d72ff] transition-colors lowercase inline-flex items-center gap-2">
+            <span>←</span> kembali ke menu
           </Link>
         </div>
       )}
