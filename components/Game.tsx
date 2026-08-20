@@ -2,7 +2,7 @@
 
 import { useRef, useState, useEffect, useMemo } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useGLTF, Environment, Box, useAnimations } from "@react-three/drei";
+import { useGLTF, Environment, Box, useAnimations, Html } from "@react-three/drei";
 import * as THREE from "three";
 import { PoseState } from "./PoseController";
 
@@ -10,10 +10,52 @@ import { PoseState } from "./PoseController";
 const LANE_WIDTH = 2.5;
 const GRAVITY = -26;
 const JUMP_VELOCITY = 10.5;
-const INITIAL_FORWARD_SPEED = 16;
+const INITIAL_FORWARD_SPEED = 10;
 const OBSTACLE_SPAWN_Z = -55;
 const DESPAWN_Z = 12;
 const JETPACK_HEIGHT = 6.5;
+
+// ==========================================
+// Custom FPS Counter Component
+// ==========================================
+function CustomFPS() {
+  const fpsRef = useRef<HTMLDivElement>(null);
+  const frameCount = useRef(0);
+  const lastTime = useRef(performance.now());
+
+  useFrame(() => {
+    frameCount.current++;
+    const now = performance.now();
+    if (now - lastTime.current >= 1000) {
+      if (fpsRef.current) {
+        fpsRef.current.innerText = `FPS: ${Math.round((frameCount.current * 1000) / (now - lastTime.current))}`;
+      }
+      frameCount.current = 0;
+      lastTime.current = now;
+    }
+  });
+
+  return (
+    <Html fullscreen style={{ pointerEvents: 'none', zIndex: 100 }}>
+      <div 
+        ref={fpsRef} 
+        style={{ 
+          position: 'absolute', 
+          top: '20px', 
+          right: '30px', 
+          fontSize: '32px', 
+          fontWeight: '900', 
+          color: '#00ffcc', 
+          textShadow: '2px 2px 4px rgba(0,0,0,0.8)',
+          pointerEvents: 'none',
+          fontFamily: 'monospace'
+        }}
+      >
+        FPS: 60
+      </div>
+    </Html>
+  );
+}
 
 // ==========================================
 // Web Audio Sound Effects Manager
@@ -153,6 +195,7 @@ function Player({
   const group = useRef<THREE.Group>(null);
   
   const model = useGLTF("/models/character.glb") as any;
+  const jetpackModel = useGLTF("/models/jetpack.glb") as any;
 
   const { actions } = useAnimations(model ? model.animations : [], group);
 
@@ -257,14 +300,20 @@ function Player({
       {/* Jetpack Visual Effect */}
       {isJetpackActive && (
         <group position={[0, 1.2, -0.3]}>
-          <mesh position={[-0.3, 0, 0]}>
-            <cylinderGeometry args={[0.15, 0.12, 0.6, 12]} />
-            <meshStandardMaterial color="#333333" metalness={0.9} />
-          </mesh>
-          <mesh position={[0.3, 0, 0]}>
-            <cylinderGeometry args={[0.15, 0.12, 0.6, 12]} />
-            <meshStandardMaterial color="#333333" metalness={0.9} />
-          </mesh>
+          {jetpackModel && jetpackModel.scene ? (
+            <primitive object={jetpackModel.scene} scale={0.5} position={[0, 0, 0]} />
+          ) : (
+            <>
+              <mesh position={[-0.3, 0, 0]}>
+                <cylinderGeometry args={[0.15, 0.12, 0.6, 12]} />
+                <meshStandardMaterial color="#333333" metalness={0.9} />
+              </mesh>
+              <mesh position={[0.3, 0, 0]}>
+                <cylinderGeometry args={[0.15, 0.12, 0.6, 12]} />
+                <meshStandardMaterial color="#333333" metalness={0.9} />
+              </mesh>
+            </>
+          )}
           {/* Flame Jets */}
           <mesh position={[-0.3, -0.5, 0]} rotation={[Math.PI, 0, 0]}>
             <coneGeometry args={[0.15, 0.5, 12]} />
@@ -710,7 +759,7 @@ export default function Game({
   useEffect(() => {
     if (!isWalking) return;
     const accelInterval = setInterval(() => {
-      setCurrentSpeed((prev) => Math.min(32, prev + 0.3));
+      setCurrentSpeed((prev) => Math.min(24, prev + 0.15));
     }, 1000);
     return () => clearInterval(accelInterval);
   }, [isWalking]);
@@ -793,13 +842,13 @@ export default function Game({
   };
 
   const handleHitObstacle = () => {
-    // Subtract score penalty on collision instead of triggering Game Over
-    scoreRef.current = Math.max(0, scoreRef.current - 100);
-    onScoreUpdate(scoreRef.current);
+    // Trigger Game Over on collision
+    onGameOver();
   };
 
   return (
     <Canvas camera={{ position: [0, 4.5, 6.5], fov: 60 }}>
+      <CustomFPS />
       {/* Fog atmosphere for horizon blending */}
       <fog attach="fog" args={["#0f172a", 20, 75]} />
 

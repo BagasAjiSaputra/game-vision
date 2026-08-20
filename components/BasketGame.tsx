@@ -5,15 +5,18 @@ import { BasketPoseState } from "./BasketPoseController";
 
 interface BasketGameProps {
   poseState: BasketPoseState | null;
+  onScoreUpdate: (score: number) => void;
 }
 
-export default function BasketGame({ poseState }: BasketGameProps) {
+export default function BasketGame({ poseState, onScoreUpdate }: BasketGameProps) {
   const [score, setScore] = useState(0);
   const [gameState, setGameState] = useState<"playing" | "scored" | "missed">("playing");
   
   const requestRef = useRef<number>();
   const hoopRef = useRef<HTMLDivElement>(null);
   const ballRef = useRef<HTMLImageElement>(null);
+  const leftHandRef = useRef<HTMLDivElement>(null);
+  const rightHandRef = useRef<HTMLDivElement>(null);
 
   // Game state refs for animation loop
   const hoopX = useRef(50); // percentage
@@ -90,17 +93,22 @@ export default function BasketGame({ poseState }: BasketGameProps) {
         const distanceToHoop = Math.abs(throwTargetX.current - hoopX.current);
         if (distanceToHoop < 8) { // Tolerance percentage
           setGameState("scored");
-          setScore(s => s + 1);
+          setScore(s => {
+            const nextScore = s + 1;
+            onScoreUpdate(nextScore);
+            return nextScore;
+          });
           // Increase speed slightly
           hoopSpeed.current = Math.min(0.8, hoopSpeed.current + 0.05);
         } else {
           setGameState("missed");
         }
-        throwProgress.current = 2; // Move to end state
+        throwProgress.current = 2.1; // Move to end state
       } else if (throwProgress.current > 2) {
          // Reset ball after a delay
          setTimeout(() => {
            isBallThrown.current = false;
+           setGameState("playing"); // Clear the "SWISH" or "MISSED" text
            if (ballRef.current) {
              ballRef.current.style.left = `50%`;
              ballRef.current.style.top = `85%`;
@@ -114,6 +122,49 @@ export default function BasketGame({ poseState }: BasketGameProps) {
        ballRef.current.style.left = `${50 + (currentAimX.current - 50) * 0.2}%`;
        ballRef.current.style.top = `85%`;
        ballRef.current.style.transform = `translate(-50%, -50%) scale(1)`;
+    }
+
+    // 5. Update Hands POV Animation
+    if (leftHandRef.current && rightHandRef.current) {
+      if (!isBallThrown.current) {
+        // Idle
+        leftHandRef.current.style.opacity = '1';
+        rightHandRef.current.style.opacity = '1';
+        
+        // Track aim slightly
+        const aimOffset = (currentAimX.current - 50) * 0.2;
+        leftHandRef.current.style.left = `${45 + aimOffset}%`;
+        leftHandRef.current.style.top = `90%`;
+        leftHandRef.current.style.transform = `translate(-50%, -50%) rotate(-15deg) scale(1)`;
+
+        rightHandRef.current.style.left = `${55 + aimOffset}%`;
+        rightHandRef.current.style.top = `90%`;
+        rightHandRef.current.style.transform = `translate(-50%, -50%) rotate(15deg) scale(1)`;
+      } else {
+        // Throwing animation
+        const t = throwProgress.current; // 0 to 1
+        
+        if (t < 0.25) {
+          // Move up with the ball
+          const handY = 90 - (t * 120); // move up fast
+          const handScale = 1 - (t * 1.5);
+          
+          leftHandRef.current.style.top = `${handY}%`;
+          leftHandRef.current.style.transform = `translate(-50%, -50%) rotate(-15deg) scale(${handScale})`;
+          
+          rightHandRef.current.style.top = `${handY}%`;
+          rightHandRef.current.style.transform = `translate(-50%, -50%) rotate(15deg) scale(${handScale})`;
+          
+          // Fade out quickly
+          const opacity = Math.max(0, 1 - (t / 0.25));
+          leftHandRef.current.style.opacity = opacity.toString();
+          rightHandRef.current.style.opacity = opacity.toString();
+        } else {
+          // Fully faded
+          leftHandRef.current.style.opacity = '0';
+          rightHandRef.current.style.opacity = '0';
+        }
+      }
     }
 
     requestRef.current = requestAnimationFrame(update);
@@ -131,13 +182,16 @@ export default function BasketGame({ poseState }: BasketGameProps) {
       
       {/* Background Image/Texture */}
       <div 
-        className="absolute inset-0 opacity-40 mix-blend-overlay"
+        className="absolute inset-0 z-0"
         style={{
-          backgroundImage: "url('/assets/basket/wood.jpg')",
-          backgroundSize: "cover",
-          backgroundPosition: "center"
+          backgroundImage: "url('/assets/basket/court_bg.png')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center bottom'
         }}
       />
+      
+      {/* Dark overlay to make UI pop */}
+      <div className="absolute inset-0 bg-black/20 z-0 pointer-events-none" />
 
       {/* Court floor styling */}
       <div className="absolute bottom-0 w-full h-1/2 bg-gradient-to-t from-[#c5793a] to-transparent opacity-80" />
@@ -188,13 +242,29 @@ export default function BasketGame({ poseState }: BasketGameProps) {
         ref={ballRef}
         src="/assets/basket/ball.png"
         alt="Basketball"
-        className="absolute w-24 h-24 object-contain z-30 drop-shadow-2xl"
+        className="absolute w-28 h-28 object-contain z-40 drop-shadow-2xl"
         style={{
           left: '50%',
           top: '85%',
           transform: 'translate(-50%, -50%)'
         }}
       />
+
+      {/* POV Hands */}
+      <div 
+        ref={leftHandRef}
+        className="absolute z-40 text-[100px] select-none pointer-events-none drop-shadow-2xl transition-opacity duration-75"
+        style={{ left: '45%', top: '90%', transform: 'translate(-50%, -50%) rotate(-15deg)' }}
+      >
+        ✋🏽
+      </div>
+      <div 
+        ref={rightHandRef}
+        className="absolute z-40 text-[100px] select-none pointer-events-none drop-shadow-2xl transition-opacity duration-75"
+        style={{ left: '55%', top: '90%', transform: 'translate(-50%, -50%) rotate(15deg) scaleX(-1)' }}
+      >
+        ✋🏽
+      </div>
 
       {/* Instructions */}
       {!poseState && (

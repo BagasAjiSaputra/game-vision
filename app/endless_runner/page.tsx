@@ -5,12 +5,20 @@ import Game from "@/components/Game";
 import PoseController, { PoseState } from "@/components/PoseController";
 import Link from "next/link";
 
-export default function Home() {
+export interface LeaderboardEntry {
+  name: string;
+  score: number;
+  date: string;
+}
+
+export default function EndlessRunner() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isGameOver, setIsGameOver] = useState(false);
   const [score, setScore] = useState(0);
   const [coins, setCoins] = useState(0);
-  const [highScore, setHighScore] = useState(0);
+  
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [playerName, setPlayerName] = useState("");
 
   const [magnetTimeLeft, setMagnetTimeLeft] = useState(0);
   const [jetpackTimeLeft, setJetpackTimeLeft] = useState(0);
@@ -23,13 +31,18 @@ export default function Home() {
   });
 
   useEffect(() => {
-    const saved = localStorage.getItem("endless_runner_highscore");
+    const saved = localStorage.getItem("endlessRunnerLeaderboard");
     if (saved) {
-      setHighScore(parseInt(saved, 10));
+      try {
+        setLeaderboard(JSON.parse(saved));
+      } catch (e) {
+        console.error("Failed to load leaderboard");
+      }
     }
   }, []);
 
   const startGame = () => {
+    if (!playerName.trim()) return;
     setIsPlaying(true);
     setIsGameOver(false);
     setScore(0);
@@ -41,11 +54,24 @@ export default function Home() {
   const handleGameOver = () => {
     setIsPlaying(false);
     setIsGameOver(true);
-    setHighScore((prev) => {
-      const nextHigh = Math.max(prev, score);
-      localStorage.setItem("endless_runner_highscore", nextHigh.toString());
-      return nextHigh;
-    });
+    
+    // Auto-save if it's a new high score
+    const totalScore = score + (coins * 10); // Or just score? I will just use score since coins are separate or maybe add them. Let's just use score.
+    const isTop5 = leaderboard.length < 5 || score > (leaderboard[leaderboard.length - 1]?.score || 0);
+    if (isTop5 && score > 0 && playerName.trim()) {
+      const newEntry: LeaderboardEntry = {
+        name: playerName.substring(0, 20).toUpperCase(),
+        score,
+        date: new Date().toLocaleDateString()
+      };
+      
+      const newLeaderboard = [...leaderboard, newEntry]
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 5);
+        
+      setLeaderboard(newLeaderboard);
+      localStorage.setItem("endlessRunnerLeaderboard", JSON.stringify(newLeaderboard));
+    }
   };
 
   const handlePowerupUpdate = (magnetTime: number, jetpackTime: number) => {
@@ -75,7 +101,7 @@ export default function Home() {
 
             {/* High Score */}
             <div className="bg-black/70 backdrop-blur-md px-4 py-2 rounded-xl border border-purple-500/30 font-mono text-xs text-purple-300">
-              HIGH SCORE: <span className="font-bold text-white text-sm">{Math.max(highScore, score)}</span>
+              HIGH SCORE: <span className="font-bold text-white text-sm">{Math.max(leaderboard[0]?.score || 0, score)}</span>
             </div>
           </div>
 
@@ -132,25 +158,64 @@ export default function Home() {
                 <h2 className="text-2xl font-bold text-[#ff4b4b] lowercase">gagal</h2>
               </div>
               <div className="text-right">
-                <h3 className="text-[#888] text-sm lowercase mb-1">skor / koin / terbaik</h3>
-                <h2 className="text-2xl font-bold text-[#e2e2e2] lowercase">{score} / {coins} / {highScore}</h2>
+                <h3 className="text-[#888] text-sm lowercase mb-1">skor / koin</h3>
+                <h2 className="text-2xl font-bold text-[#e2e2e2] lowercase">{score} / {coins}</h2>
               </div>
             </div>
           )}
 
+          <div className="w-full mb-12">
+            <h3 className="text-[#888] text-sm lowercase mb-6 border-b border-[#222] pb-2">leaderboard</h3>
+            {leaderboard.length > 0 ? (
+              <div className="space-y-3">
+                {leaderboard.map((entry, idx) => (
+                  <div key={idx} className="flex justify-between items-center bg-[#1a1a24] p-4 rounded-lg border border-[#222]">
+                    <div className="flex items-center gap-4">
+                      <span className={`font-mono font-bold ${idx === 0 ? 'text-[#ffd700]' : idx === 1 ? 'text-[#c0c0c0]' : idx === 2 ? 'text-[#cd7f32]' : 'text-[#555]'}`}>#{idx + 1}</span>
+                      <span className="font-bold text-xl uppercase tracking-widest">{entry.name}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-bold text-[#9d72ff] text-xl block">{entry.score}</span>
+                      <span className="text-[#555] text-xs">{entry.date}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 bg-[#1a1a24] rounded-lg border border-[#222] text-[#555] border-dashed">
+                <p className="text-sm lowercase">belum ada rekor tercetak.</p>
+                <p className="text-xs mt-1">jadilah yang pertama!</p>
+              </div>
+            )}
+          </div>
+
           <div className="w-full flex flex-col mb-12">
             <h3 className="text-[#888] text-sm lowercase mb-6 border-b border-[#222] pb-2">kendali (mediapipe ai)</h3>
+            <p className="text-[#888] text-sm mb-4 lowercase">posisikan seluruh badan anda di depan kamera.</p>
             <ul className="text-[#e2e2e2] space-y-4 text-xl md:text-2xl lowercase tracking-tight">
-              <li className="flex items-center gap-4"><span className="text-[#9d72ff] text-sm">01</span> <span className="text-[#888] text-sm w-32">miring kiri/kanan</span> pindah jalur</li>
-              <li className="flex items-center gap-4"><span className="text-[#9d72ff] text-sm">02</span> <span className="text-[#888] text-sm w-32">jalan di tempat</span> maju</li>
-              <li className="flex items-center gap-4"><span className="text-[#9d72ff] text-sm">03</span> <span className="text-[#888] text-sm w-32">lompat</span> hindari rintangan rendah</li>
-              <li className="flex items-center gap-4"><span className="text-[#9d72ff] text-sm">04</span> <span className="text-[#888] text-sm w-32">jongkok</span> meluncur di bawah rintangan</li>
+              <li className="flex items-center gap-4"><span className="text-[#9d72ff] text-sm">01</span> <span className="text-[#888] text-sm w-44">lompat</span> melompati rintangan</li>
+              <li className="flex items-center gap-4"><span className="text-[#9d72ff] text-sm">02</span> <span className="text-[#888] text-sm w-44">jongkok</span> meluncur ke bawah</li>
+              <li className="flex items-center gap-4"><span className="text-[#9d72ff] text-sm">03</span> <span className="text-[#888] text-sm w-44">geser kiri/kanan</span> berpindah jalur</li>
             </ul>
+          </div>
+
+          <div className="w-full flex flex-col mb-8">
+            <h3 className="text-[#888] text-sm lowercase mb-4 border-b border-[#222] pb-2">nama pemain (maksimal 20 huruf)</h3>
+            <input 
+              type="text" 
+              maxLength={20} 
+              required
+              value={playerName}
+              onChange={(e) => setPlayerName(e.target.value.toUpperCase())}
+              placeholder="YOUR NAME" 
+              className="bg-black/50 border border-[#333] text-white text-xl font-bold w-full max-w-sm rounded-lg p-3 uppercase focus:outline-none focus:border-[#9d72ff] transition-colors"
+            />
           </div>
 
           <button
             onClick={startGame}
-            className="group flex items-start gap-6 py-8 border-t border-b border-[#222] hover:border-[#444] transition-colors cursor-pointer w-full text-left mt-auto"
+            disabled={!playerName.trim()}
+            className={`group flex items-start gap-6 py-8 border-t border-b border-[#222] transition-colors w-full text-left mt-auto ${!playerName.trim() ? 'opacity-50 cursor-not-allowed' : 'hover:border-[#444] cursor-pointer'}`}
           >
             <span className="text-[#9d72ff] font-mono text-xs font-medium w-6 pt-3">00</span>
             <div className="flex-1 flex flex-col">

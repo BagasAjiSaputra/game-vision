@@ -88,6 +88,10 @@ export default function BirdPoseController({ onPoseState }: BirdPoseControllerPr
           const rightWrist = landmarks[16];
           const leftHip = landmarks[23];
           const rightHip = landmarks[24];
+          const leftKnee = landmarks[25];
+          const rightKnee = landmarks[26];
+          const leftAnkle = landmarks[27];
+          const rightAnkle = landmarks[28];
 
           const drawLine = (p1: any, p2: any, color: string) => {
             if (!p1 || !p2) return;
@@ -119,6 +123,11 @@ export default function BirdPoseController({ onPoseState }: BirdPoseControllerPr
           drawLine(rightShoulder, rightElbow, "#ffffff");
           drawLine(rightElbow, rightWrist, "#ffffff");
 
+          drawLine(leftHip, leftKnee, "#ffffff");
+          drawLine(leftKnee, leftAnkle, "#ffffff");
+          drawLine(rightHip, rightKnee, "#ffffff");
+          drawLine(rightKnee, rightAnkle, "#ffffff");
+
           // Draw joints
           drawJoint(leftShoulder, "#00ffcc");
           drawJoint(rightShoulder, "#00ffcc");
@@ -126,6 +135,10 @@ export default function BirdPoseController({ onPoseState }: BirdPoseControllerPr
           drawJoint(rightElbow, "#00ffcc");
           drawJoint(leftHip, "#ff0077");
           drawJoint(rightHip, "#ff0077");
+          drawJoint(leftKnee, "#ff0077");
+          drawJoint(rightKnee, "#ff0077");
+          drawJoint(leftAnkle, "#ff0077");
+          drawJoint(rightAnkle, "#ff0077");
 
           // Draw wrists (Wings)
           drawJoint(leftWrist, "cyan", 8);
@@ -146,8 +159,10 @@ export default function BirdPoseController({ onPoseState }: BirdPoseControllerPr
           }
 
           // Flying detection
-          // Arms must be raised above hips to fly
-          const isFlying = leftWrist.y < leftHip.y - 0.05 && rightWrist.y < rightHip.y - 0.05;
+          // Leg lift: if one knee is noticeably higher than the other (diff > 0.08)
+          // or if both knees are raised high above the regular standing position.
+          const isFlying = Math.abs(leftKnee.y - rightKnee.y) > 0.08 || 
+                           (leftKnee.y < leftHip.y + 0.25 && rightKnee.y < rightHip.y + 0.25);
 
           const stateStr = `${lane},${isFlying}`;
           if (stateStr !== lastEmittedStateRef.current) {
@@ -162,7 +177,7 @@ export default function BirdPoseController({ onPoseState }: BirdPoseControllerPr
     const startCamera = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { width: 320, height: 240, facingMode: "user" } 
+          video: { width: 320, height: 240 } // Removed facingMode so external cameras work
         });
         
         if (!isActive || !videoElement) return;
@@ -227,10 +242,10 @@ export default function BirdPoseController({ onPoseState }: BirdPoseControllerPr
         ></canvas>
       </div>
       <div className="text-white text-[10px] text-center mt-3 font-medium space-y-1">
-        <p className="text-cyan-400">Rentangkan Tangan: Terbang Lurus</p>
+        <p className="text-cyan-400">Angkat Satu Kaki: Terbang Maju</p>
         <p>Miring Kiri: Belok Kiri</p>
         <p>Miring Kanan: Belok Kanan</p>
-        <p className="text-gray-400">Turunkan Tangan: Berhenti</p>
+        <p className="text-gray-400">Turunkan Kaki: Berhenti</p>
       </div>
     </div>
   );

@@ -221,20 +221,30 @@ export default function PoseController({ onPoseState }: PoseControllerProps) {
           // Slide/Crouch detection: shoulder/hip drops DOWN (larger Y)
           const isSliding = shoulderY > currentBaseline + 0.06;
 
-          // Walking / Motion detection
+          // Walking / Motion detection (Running in place)
           const now = Date.now();
           if (prevLandmarksRef.current) {
             const prevLeftKnee = prevLandmarksRef.current[25];
             const prevRightKnee = prevLandmarksRef.current[26];
-            const deltaL = Math.abs(leftKnee.y - prevLeftKnee.y) + Math.abs(leftKnee.x - prevLeftKnee.x);
-            const deltaR = Math.abs(rightKnee.y - prevRightKnee.y) + Math.abs(rightKnee.x - prevRightKnee.x);
-            if (deltaL > 0.012 || deltaR > 0.012) {
+            
+            // Hitung perubahan vertikal (Y) dan horizontal (X)
+            const deltaL_Y = Math.abs(leftKnee.y - prevLeftKnee.y);
+            const deltaR_Y = Math.abs(rightKnee.y - prevRightKnee.y);
+            const deltaL_X = Math.abs(leftKnee.x - prevLeftKnee.x);
+            const deltaR_X = Math.abs(rightKnee.x - prevRightKnee.x);
+            
+            // Gunakan threshold menengah agar lari lebih mudah terdeteksi tapi tetap menolak gerakan mikro
+            const WALK_THRESHOLD_Y = 0.018;
+            const WALK_THRESHOLD_X = 0.015;
+            
+            if (deltaL_Y > WALK_THRESHOLD_Y || deltaR_Y > WALK_THRESHOLD_Y || deltaL_X > WALK_THRESHOLD_X || deltaR_X > WALK_THRESHOLD_X) {
               lastWalkTimeRef.current = now;
             }
           }
           prevLandmarksRef.current = landmarks;
-
-          const isWalking = (now - lastWalkTimeRef.current) < 600;
+          
+          // Kurangi waktu toleransi jalan agar karakter lebih cepat berhenti saat pemain diam
+          const isWalking = (now - lastWalkTimeRef.current) < 400;
 
           // Emit state update when state changes
           const stateStr = `${lane},${isWalking},${isJumping},${isSliding}`;
