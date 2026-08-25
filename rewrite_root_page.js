@@ -1,9 +1,10 @@
-"use client";
+const fs = require('fs');
+
+const pageContent = `"use client";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Activity, RefreshCw, ArrowRight, Trophy } from "lucide-react";
 
 export interface LeaderboardEntry {
   name: string;
@@ -85,99 +86,99 @@ export default function Home() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col bg-[#0a0d0c] text-white font-sans px-6 py-12 md:px-12 md:py-16 w-full">
+    <main className="flex min-h-screen flex-col bg-[#0a0d0c] text-white font-sans px-6 py-12 md:px-12 md:py-16 max-w-5xl mx-auto">
       
       {/* Top Header */}
       <div className="flex justify-between items-center mb-10">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 border-2 border-[#1c1e1c] flex items-center justify-center overflow-hidden shrink-0">
-             <Activity className="w-6 h-6 text-[#d4ff00]" />
+             <span className="text-xl">🏃</span>
           </div>
           <div>
-            <p className="text-[#a0a0a0] text-xs">Selamat Pagi!</p>
-            <h1 className="text-lg font-bold">{isNameSet ? playerName : "Pemain"}</h1>
+            <p className="text-[#a0a0a0] text-xs">Good Morning!</p>
+            <h1 className="text-lg font-bold">{isNameSet ? playerName : "Athlete"}</h1>
           </div>
         </div>
         
         {isNameSet && (
           <button 
             onClick={handleChangeName}
-            className="w-10 h-10 rounded-full bg-[#1c1e1c] flex items-center justify-center text-[#a0a0a0] border border-white/5 hover:border-[#d4ff00]/50 hover:text-white transition-colors"
+            className="w-10 h-10 rounded-full bg-[#1c1e1c] flex items-center justify-center text-sm border border-white/5 hover:border-[#d4ff00]/50 transition-colors"
           >
-            <RefreshCw className="w-4 h-4" />
+            🔄
           </button>
         )}
       </div>
 
       {!isNameSet ? (
-        <div className="flex flex-col flex-1 justify-center max-w-xl mx-auto w-full">
-           <h2 className="text-3xl font-bold mb-6 tracking-tight">Siapa yang<br/>bermain hari ini?</h2>
+        <div className="flex flex-col flex-1 justify-center max-w-md mx-auto w-full">
+           <h2 className="text-3xl font-bold mb-6 tracking-tight">Who is<br/>playing today?</h2>
            <form onSubmit={handleSaveName} className="flex gap-2">
              <input
                type="text"
                value={playerName}
                onChange={(e) => setPlayerName(e.target.value.toUpperCase())}
                className="flex-1 bg-[#1c1e1c] border border-white/5 rounded-full px-6 py-4 text-white font-bold focus:outline-none focus:border-[#d4ff00] transition-colors placeholder:text-[#555] uppercase"
-               placeholder="MASUKKAN NAMA"
+               placeholder="ENTER NAME"
                required
                autoFocus
                maxLength={15}
              />
              <button type="submit" className="w-14 h-14 rounded-full bg-[#d4ff00] text-black flex items-center justify-center font-bold hover:scale-105 transition-transform shrink-0">
-               <ArrowRight className="w-6 h-6" />
+               →
              </button>
            </form>
         </div>
       ) : (
-        <div className="flex flex-col h-full w-full pb-20">
+        <div className="flex flex-col h-full w-full max-w-md mx-auto md:max-w-none pb-20">
           
           <div className="flex justify-between items-end mb-6">
-            <h2 className="text-2xl font-bold">Pilih permainan<br/><span className="text-[#d4ff00]">Favoritmu</span></h2>
+            <h2 className="text-2xl font-bold">Choose your<br/><span className="text-[#d4ff00]">Favorite game</span></h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             
             {/* Endless Runner */}
-            <Link href="/endless_runner" className="group rounded-3xl bg-[#1c1e1c] text-white p-6 border border-white/5 flex flex-col justify-between relative overflow-hidden transition-all hover:bg-[#d4ff00] hover:text-black hover:border-[#d4ff00] hover:scale-[1.02] min-h-[220px]">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 group-hover:bg-white/20 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none transition-colors"></div>
+            <Link href="/endless_runner" className="group rounded-3xl bg-[#d4ff00] text-black p-6 shadow-[0_4px_30px_rgba(212,255,0,0.15)] flex flex-col justify-between relative overflow-hidden transition-transform hover:scale-[1.02] min-h-[220px]">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
               <div>
                  <div className="flex justify-between items-start mb-2">
                    <h3 className="text-2xl font-black uppercase tracking-tight">Endless<br/>Runner</h3>
-                   <span className="bg-white/5 group-hover:bg-black text-[#a0a0a0] group-hover:text-[#d4ff00] text-[10px] font-bold px-3 py-1.5 rounded-full uppercase tracking-wider transition-colors">Populer</span>
+                   <span className="bg-black text-[#d4ff00] text-[10px] font-bold px-3 py-1.5 rounded-full uppercase tracking-wider">Popular</span>
                  </div>
-                 <p className="text-[#a0a0a0] group-hover:text-black/60 text-sm font-medium mt-1 transition-colors">Berlari dan hindari rintangan</p>
+                 <p className="text-black/60 text-sm font-medium mt-1">Run and dodge obstacles</p>
               </div>
               <div className="flex items-center gap-3 mt-auto">
-                 <div className="w-10 h-10 rounded-full bg-white/10 group-hover:bg-black flex items-center justify-center text-white transition-colors"><ArrowRight className="w-5 h-5" /></div>
-                 <span className="font-bold text-sm uppercase text-[#a0a0a0] group-hover:text-black transition-colors">Mainkan</span>
+                 <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center text-white">→</div>
+                 <span className="font-bold text-sm uppercase">Play Now</span>
               </div>
             </Link>
 
             {/* Bird Runner */}
-            <Link href="/bird_runner" className="group rounded-3xl bg-[#1c1e1c] text-white p-6 border border-white/5 flex flex-col justify-between relative overflow-hidden transition-all hover:bg-[#d4ff00] hover:text-black hover:border-[#d4ff00] hover:scale-[1.02] min-h-[220px]">
+            <Link href="/bird_runner" className="group rounded-3xl bg-[#1c1e1c] text-white p-6 border border-white/5 flex flex-col justify-between relative overflow-hidden transition-transform hover:border-blue-500/50 hover:scale-[1.02] min-h-[220px]">
               <div>
                  <div className="flex justify-between items-start mb-2">
                    <h3 className="text-2xl font-black uppercase tracking-tight">Bird<br/>Runner</h3>
                  </div>
-                 <p className="text-[#a0a0a0] group-hover:text-black/60 text-sm font-medium mt-1 transition-colors">Kepakkan sayapmu untuk terbang</p>
+                 <p className="text-[#a0a0a0] text-sm font-medium mt-1">Flap your wings to fly</p>
               </div>
               <div className="flex items-center gap-3 mt-auto">
-                 <div className="w-10 h-10 rounded-full bg-white/10 group-hover:bg-black flex items-center justify-center text-white transition-colors"><ArrowRight className="w-5 h-5" /></div>
-                 <span className="font-bold text-sm uppercase text-[#a0a0a0] group-hover:text-black transition-colors">Mainkan</span>
+                 <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white group-hover:bg-blue-500 group-hover:text-white transition-colors">→</div>
+                 <span className="font-bold text-sm uppercase text-[#a0a0a0] group-hover:text-white transition-colors">Play Now</span>
               </div>
             </Link>
 
             {/* Basket Shoot */}
-            <Link href="/basket_shoot" className="group rounded-3xl bg-[#1c1e1c] text-white p-6 border border-white/5 flex flex-col justify-between relative overflow-hidden transition-all hover:bg-[#d4ff00] hover:text-black hover:border-[#d4ff00] hover:scale-[1.02] min-h-[220px]">
+            <Link href="/basket_shoot" className="group rounded-3xl bg-[#1c1e1c] text-white p-6 border border-white/5 flex flex-col justify-between relative overflow-hidden transition-transform hover:border-orange-500/50 hover:scale-[1.02] min-h-[220px]">
               <div>
                  <div className="flex justify-between items-start mb-2">
                    <h3 className="text-2xl font-black uppercase tracking-tight">Basket<br/>Shoot</h3>
                  </div>
-                 <p className="text-[#a0a0a0] group-hover:text-black/60 text-sm font-medium mt-1 transition-colors">Lompat dan tembak bola</p>
+                 <p className="text-[#a0a0a0] text-sm font-medium mt-1">Jump and shoot the ball</p>
               </div>
               <div className="flex items-center gap-3 mt-auto">
-                 <div className="w-10 h-10 rounded-full bg-white/10 group-hover:bg-black flex items-center justify-center text-white transition-colors"><ArrowRight className="w-5 h-5" /></div>
-                 <span className="font-bold text-sm uppercase text-[#a0a0a0] group-hover:text-black transition-colors">Mainkan</span>
+                 <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white group-hover:bg-orange-500 group-hover:text-white transition-colors">→</div>
+                 <span className="font-bold text-sm uppercase text-[#a0a0a0] group-hover:text-white transition-colors">Play Now</span>
               </div>
             </Link>
 
@@ -185,8 +186,8 @@ export default function Home() {
 
           <div className="mt-12">
             <div className="flex justify-between items-end mb-4">
-              <h3 className="text-lg font-bold">Rekor Tertinggi</h3>
-              <span className="text-[#a0a0a0] text-xs cursor-pointer hover:text-white" onClick={() => setIsLeaderboardOpen(true)}>Lihat Papan Peringkat</span>
+              <h3 className="text-lg font-bold">Top Events</h3>
+              <span className="text-[#a0a0a0] text-xs cursor-pointer hover:text-white" onClick={() => setIsLeaderboardOpen(true)}>View Leaderboard</span>
             </div>
             
             <div 
@@ -194,13 +195,13 @@ export default function Home() {
                className="rounded-3xl bg-[#1c1e1c] border border-white/5 p-5 flex items-center justify-between cursor-pointer hover:border-[#d4ff00]/50 transition-colors"
             >
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-500"><Trophy className="w-6 h-6" /></div>
+                <div className="w-12 h-12 rounded-full bg-yellow-500/10 flex items-center justify-center text-xl">🏆</div>
                 <div>
-                  <p className="font-bold">Papan Peringkat Global</p>
-                  <p className="text-[#a0a0a0] text-xs mt-1">Lihat rekor terbaik di semua mode</p>
+                  <p className="font-bold">Global Leaderboard</p>
+                  <p className="text-[#a0a0a0] text-xs mt-1">See the best records across all modes</p>
                 </div>
               </div>
-              <div className="text-[#a0a0a0]"><ArrowRight className="w-5 h-5" /></div>
+              <div className="text-[#a0a0a0]">→</div>
             </div>
           </div>
 
@@ -217,21 +218,21 @@ export default function Home() {
             >
               ✕
             </button>
-            <h2 className="text-2xl font-bold mb-6 text-white">Papan Peringkat Global</h2>
+            <h2 className="text-2xl font-bold mb-6 text-white">Global Leaderboard</h2>
             
             <div className="flex-1 overflow-y-auto pr-2 space-y-8 hide-scrollbar">
               
               {/* Overall MVP Leaderboard */}
               <div>
                 <h3 className="text-lg font-bold text-[#d4ff00] mb-4 flex items-center gap-2">
-                  🏆 Juara (Rata-rata Skor)
+                  🏆 Champions (Avg Score)
                 </h3>
                 {overallLeaderboard.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {overallLeaderboard.map((entry, idx) => (
-                      <div key={idx} className={`rounded-2xl p-4 flex items-center justify-between ${idx === 0 ? 'bg-[#d4ff00] text-black' : 'bg-black/30 border border-white/5 text-white'}`}>
+                      <div key={idx} className={\`rounded-2xl p-4 flex items-center justify-between \${idx === 0 ? 'bg-[#d4ff00] text-black' : 'bg-black/30 border border-white/5 text-white'}\`}>
                          <div className="flex items-center gap-3">
-                           <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${idx === 0 ? 'bg-black/10' : 'bg-white/5'}`}>
+                           <div className={\`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm \${idx === 0 ? 'bg-black/10' : 'bg-white/5'}\`}>
                              #{idx + 1}
                            </div>
                            <span className="font-bold">{entry.name}</span>
@@ -241,7 +242,7 @@ export default function Home() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-[#a0a0a0] text-sm bg-black/30 p-4 rounded-2xl border border-dashed border-white/10">Belum ada rekor.</p>
+                  <p className="text-[#a0a0a0] text-sm bg-black/30 p-4 rounded-2xl border border-dashed border-white/10">No records yet.</p>
                 )}
               </div>
 
@@ -261,7 +262,7 @@ export default function Home() {
                           <span className="font-bold text-sm">{entry.score}</span>
                        </div>
                      )) : (
-                       <p className="text-[#a0a0a0] text-xs">Belum ada data.</p>
+                       <p className="text-[#a0a0a0] text-xs">No data.</p>
                      )}
                    </div>
                 </div>
@@ -309,7 +310,7 @@ export default function Home() {
         </div>
       )}
 
-      <style dangerouslySetInnerHTML={{__html: `
+      <style dangerouslySetInnerHTML={{__html: \`
         .hide-scrollbar::-webkit-scrollbar {
           display: none;
         }
@@ -317,7 +318,11 @@ export default function Home() {
           -ms-overflow-style: none;
           scrollbar-width: none;
         }
-      `}} />
+      \`}} />
     </main>
   );
 }
+`;
+
+fs.writeFileSync('app/page.tsx', pageContent);
+console.log('Successfully updated page.tsx to Lime Green theme');

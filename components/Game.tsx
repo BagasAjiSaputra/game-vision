@@ -60,6 +60,8 @@ function CustomFPS() {
 // Web Audio Sound Effects Manager
 // ==========================================
 class SoundManager {
+  public masterVolume: number = 0.5;
+
   private ctx: AudioContext | null = null;
 
   private init() {
@@ -80,8 +82,8 @@ class SoundManager {
     osc.type = "sine";
     osc.frequency.setValueAtTime(987.77, this.ctx.currentTime); // B5
     osc.frequency.exponentialRampToValueAtTime(1318.51, this.ctx.currentTime + 0.1); // E6
-    gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.12);
+    gain.gain.setValueAtTime(0.25 * this.masterVolume, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001 * this.masterVolume, this.ctx.currentTime + 0.12);
     osc.connect(gain);
     gain.connect(this.ctx.destination);
     osc.start();
@@ -96,8 +98,8 @@ class SoundManager {
     osc.type = "triangle";
     osc.frequency.setValueAtTime(440, this.ctx.currentTime);
     osc.frequency.linearRampToValueAtTime(880, this.ctx.currentTime + 0.25);
-    gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
-    gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.3);
+    gain.gain.setValueAtTime(0.3 * this.masterVolume, this.ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.001 * this.masterVolume, this.ctx.currentTime + 0.3);
     osc.connect(gain);
     gain.connect(this.ctx.destination);
     osc.start();
@@ -112,8 +114,8 @@ class SoundManager {
     osc.type = "sine";
     osc.frequency.setValueAtTime(160, this.ctx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(420, this.ctx.currentTime + 0.15);
-    gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.18);
+    gain.gain.setValueAtTime(0.2 * this.masterVolume, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001 * this.masterVolume, this.ctx.currentTime + 0.18);
     osc.connect(gain);
     gain.connect(this.ctx.destination);
     osc.start();
@@ -128,8 +130,8 @@ class SoundManager {
     osc.type = "triangle";
     osc.frequency.setValueAtTime(320, this.ctx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(130, this.ctx.currentTime + 0.2);
-    gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.22);
+    gain.gain.setValueAtTime(0.2 * this.masterVolume, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001 * this.masterVolume, this.ctx.currentTime + 0.22);
     osc.connect(gain);
     gain.connect(this.ctx.destination);
     osc.start();
@@ -144,8 +146,8 @@ class SoundManager {
     osc.type = "sawtooth";
     osc.frequency.setValueAtTime(130, this.ctx.currentTime);
     osc.frequency.linearRampToValueAtTime(30, this.ctx.currentTime + 0.35);
-    gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
-    gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.4);
+    gain.gain.setValueAtTime(0.4 * this.masterVolume, this.ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.001 * this.masterVolume, this.ctx.currentTime + 0.4);
     osc.connect(gain);
     gain.connect(this.ctx.destination);
     osc.start();
@@ -768,7 +770,9 @@ export default function Game({
   onGameOver,
   onScoreUpdate,
   onCoinsUpdate,
+  volume = 0.5
   }: {
+  volume?: number;
   poseState: PoseState;
   onGameOver: (reason: string) => void;
   onScoreUpdate: (score: number) => void;

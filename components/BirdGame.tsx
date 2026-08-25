@@ -143,15 +143,15 @@ function BirdPlayer({
 
     // Slight bobbing when flying, hover when stopped
     if (isFlying) {
-       group.current.position.y = Math.sin(state.clock.elapsedTime * 8) * 0.2 + 2;
+       group.current.position.y = Math.sin(state.clock.elapsedTime * 8) * 0.2 - 1;
     } else {
        // Hover in place while countdown runs
-       group.current.position.y = Math.sin(state.clock.elapsedTime * 3) * 0.1 + 2;
+       group.current.position.y = Math.sin(state.clock.elapsedTime * 3) * 0.1 - 1;
     }
   });
 
   return (
-    <group ref={group} position={[0, 2, 0]}>
+    <group ref={group} position={[0, -1, 0]}>
       {model && model.scene ? (
         <primitive object={model.scene} scale={0.5} position={[0, -0.5, 0]} rotation={[0, Math.PI, 0]} />
       ) : (
@@ -203,7 +203,7 @@ function FighterJetObstacle({ lane, z, speed, onRemove, onHitPlayer, playerLane,
   });
 
   return (
-    <group ref={group} position={[lane * LANE_WIDTH, 2, z]}>
+    <group ref={group} position={[lane * LANE_WIDTH, -1, z]}>
       {/* Jet Body */}
       <mesh position={[0, 0, 0]} rotation={[Math.PI / 2, 0, 0]}>
         <cylinderGeometry args={[0.2, 0.4, 2.5, 8]} />
