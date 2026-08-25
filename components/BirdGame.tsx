@@ -202,54 +202,21 @@ function FighterJetObstacle({ lane, z, speed, onRemove, onHitPlayer, playerLane,
     }
   });
 
+  const model = useGLTF("/models/heli_2.glb") as any;
+  const clonedScene = useMemo(() => {
+    return model && model.scene ? model.scene.clone() : null;
+  }, [model]);
+
   return (
     <group ref={group} position={[lane * LANE_WIDTH, -1, z]}>
-      {/* Jet Body */}
-      <mesh position={[0, 0, 0]} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.2, 0.4, 2.5, 8]} />
-        <meshStandardMaterial color="#475569" metalness={0.8} roughness={0.3} />
-      </mesh>
-      
-      {/* Jet Nose (points towards +Z, which is towards the camera/player) */}
-      <mesh position={[0, 0, 1.75]} rotation={[Math.PI / 2, 0, 0]}>
-        <coneGeometry args={[0.2, 1.0, 8]} />
-        <meshStandardMaterial color="#334155" metalness={0.8} roughness={0.3} />
-      </mesh>
-
-      {/* Cockpit Canopy */}
-      <mesh position={[0, 0.3, 0.8]} rotation={[Math.PI / 2, 0, 0]}>
-        <capsuleGeometry args={[0.15, 0.6, 4, 8]} />
-        <meshStandardMaterial color="#0ea5e9" metalness={0.9} roughness={0.1} />
-      </mesh>
-
-      {/* Main Wings */}
-      <mesh position={[0, 0, -0.2]}>
-        <boxGeometry args={[3.5, 0.05, 1.2]} />
-        <meshStandardMaterial color="#475569" metalness={0.8} roughness={0.3} />
-      </mesh>
-
-      {/* Tail Wings */}
-      <mesh position={[0, 0, -1.0]}>
-        <boxGeometry args={[1.5, 0.05, 0.6]} />
-        <meshStandardMaterial color="#334155" metalness={0.8} roughness={0.3} />
-      </mesh>
-
-      {/* Vertical Tail Fin */}
-      <mesh position={[0, 0.4, -1.0]} rotation={[-0.2, 0, 0]}>
-        <boxGeometry args={[0.05, 0.8, 0.6]} />
-        <meshStandardMaterial color="#334155" metalness={0.8} roughness={0.3} />
-      </mesh>
-
-      {/* Engine Glow */}
-      <mesh position={[-0.15, 0, -1.3]} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.1, 0.1, 0.2, 8]} />
-        <meshStandardMaterial color="#f97316" emissive="#ea580c" emissiveIntensity={2} />
-      </mesh>
-      <mesh position={[0.15, 0, -1.3]} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.1, 0.1, 0.2, 8]} />
-        <meshStandardMaterial color="#f97316" emissive="#ea580c" emissiveIntensity={2} />
-      </mesh>
-      <pointLight position={[0, 0, -1.5]} color="#ea580c" intensity={2} distance={5} />
+      {clonedScene ? (
+        <primitive object={clonedScene} scale={0.5} rotation={[0, 0, 0]} />
+      ) : (
+        <mesh position={[0, 0, 0]}>
+          <boxGeometry args={[1, 1, 1]} />
+          <meshStandardMaterial color="red" />
+        </mesh>
+      )}
     </group>
   );
 }
