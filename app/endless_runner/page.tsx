@@ -20,8 +20,7 @@ export default function EndlessRunner() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [playerName, setPlayerName] = useState("");
 
-  const [magnetTimeLeft, setMagnetTimeLeft] = useState(0);
-  const [jetpackTimeLeft, setJetpackTimeLeft] = useState(0);
+  const [gameOverReason, setGameOverReason] = useState("");
 
   const [poseState, setPoseState] = useState<PoseState>({
     lane: 0,
@@ -29,6 +28,18 @@ export default function EndlessRunner() {
     isJumping: false,
     isSliding: false,
   });
+
+  useEffect(() => {
+    if (isPlaying) {
+      const audio = new Audio('/music/endless_run1.mp3');
+      audio.loop = true;
+      audio.play().catch(e => console.error("Audio playback failed:", e));
+      return () => {
+        audio.pause();
+        audio.currentTime = 0;
+      };
+    }
+  }, [isPlaying]);
 
   useEffect(() => {
     const saved = localStorage.getItem("endlessRunnerLeaderboard");
@@ -47,13 +58,13 @@ export default function EndlessRunner() {
     setIsGameOver(false);
     setScore(0);
     setCoins(0);
-    setMagnetTimeLeft(0);
-    setJetpackTimeLeft(0);
+    setGameOverReason("");
   };
 
-  const handleGameOver = () => {
+  const handleGameOver = (reason?: string) => {
     setIsPlaying(false);
     setIsGameOver(true);
+    if (reason) setGameOverReason(reason);
     
     // Auto-save if it's a new high score
     const totalScore = score + (coins * 10); // Or just score? I will just use score since coins are separate or maybe add them. Let's just use score.
@@ -74,10 +85,6 @@ export default function EndlessRunner() {
     }
   };
 
-  const handlePowerupUpdate = (magnetTime: number, jetpackTime: number) => {
-    setMagnetTimeLeft(magnetTime);
-    setJetpackTimeLeft(jetpackTime);
-  };
 
   return (
     <main className="flex min-h-screen flex-col bg-[#111116] text-[#e2e2e2] overflow-hidden relative font-sans">
@@ -104,39 +111,6 @@ export default function EndlessRunner() {
               HIGH SCORE: <span className="font-bold text-white text-sm">{Math.max(leaderboard[0]?.score || 0, score)}</span>
             </div>
           </div>
-
-          {/* Active Powerup Countdown Bars */}
-          <div className="flex flex-col gap-1 w-48 mt-1">
-            {magnetTimeLeft > 0 && (
-              <div className="bg-rose-950/80 border border-rose-500/50 rounded-lg p-1.5 backdrop-blur-sm shadow-md">
-                <div className="flex justify-between text-[11px] font-mono text-rose-300 mb-1">
-                  <span>MAGNET</span>
-                  <span>{magnetTimeLeft}s</span>
-                </div>
-                <div className="w-full bg-rose-900/50 rounded-full h-1.5 overflow-hidden">
-                  <div
-                    className="bg-rose-500 h-full transition-all duration-1000 ease-linear"
-                    style={{ width: `${(magnetTimeLeft / 9) * 100}%` }}
-                  ></div>
-                </div>
-              </div>
-            )}
-
-            {jetpackTimeLeft > 0 && (
-              <div className="bg-sky-950/80 border border-sky-500/50 rounded-lg p-1.5 backdrop-blur-sm shadow-md">
-                <div className="flex justify-between text-[11px] font-mono text-sky-300 mb-1">
-                  <span>JETPACK</span>
-                  <span>{jetpackTimeLeft}s</span>
-                </div>
-                <div className="w-full bg-sky-900/50 rounded-full h-1.5 overflow-hidden">
-                  <div
-                    className="bg-sky-400 h-full transition-all duration-1000 ease-linear"
-                    style={{ width: `${(jetpackTimeLeft / 8) * 100}%` }}
-                  ></div>
-                </div>
-              </div>
-            )}
-          </div>
         </div>
       )}
 
@@ -156,6 +130,11 @@ export default function EndlessRunner() {
               <div>
                 <h3 className="text-[#888] text-sm lowercase mb-1">status</h3>
                 <h2 className="text-2xl font-bold text-[#ff4b4b] lowercase">gagal</h2>
+                {gameOverReason && (
+                  <p className="text-[#ff4b4b] text-xs mt-1 lowercase font-mono">
+                    ({gameOverReason})
+                  </p>
+                )}
               </div>
               <div className="text-right">
                 <h3 className="text-[#888] text-sm lowercase mb-1">skor / koin</h3>
@@ -240,7 +219,6 @@ export default function EndlessRunner() {
               onGameOver={handleGameOver}
               onScoreUpdate={setScore}
               onCoinsUpdate={setCoins}
-              onPowerupUpdate={handlePowerupUpdate}
             />
           </div>
           <PoseController onPoseState={setPoseState} />

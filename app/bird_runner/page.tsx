@@ -66,6 +66,18 @@ export default function BirdRunner() {
   };
 
   useEffect(() => {
+    if (isPlaying) {
+      const audio = new Audio('/music/heli_run1.mp3');
+      audio.loop = true;
+      audio.play().catch(e => console.error("Audio playback failed:", e));
+      return () => {
+        audio.pause();
+        audio.currentTime = 0;
+      };
+    }
+  }, [isPlaying]);
+
+  useEffect(() => {
     if (isPlaying && poseState.isFlying && !hasStartedPlaying) {
       setHasStartedPlaying(true);
     }

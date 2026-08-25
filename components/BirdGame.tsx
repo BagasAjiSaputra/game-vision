@@ -88,7 +88,7 @@ function BirdPlayer({
 
   const mainRotor = useMemo(() => {
     if (model && model.scene) {
-      let found = null;
+      let found: any = null;
       model.scene.traverse((child: any) => {
         if (child.name === "main_rotor__0") found = child;
       });
@@ -99,7 +99,7 @@ function BirdPlayer({
 
   const rearRotor = useMemo(() => {
     if (model && model.scene) {
-      let found = null;
+      let found: any = null;
       model.scene.traverse((child: any) => {
         if (child.name === "rear_rotor_1") found = child;
       });

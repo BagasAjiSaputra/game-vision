@@ -67,6 +67,18 @@ export default function BasketShootPage() {
 
   useEffect(() => {
     if (isPlaying) {
+      const audio = new Audio('/music/basket_shoot1.mp3');
+      audio.loop = true;
+      audio.play().catch(e => console.error("Audio playback failed:", e));
+      return () => {
+        audio.pause();
+        audio.currentTime = 0;
+      };
+    }
+  }, [isPlaying]);
+
+  useEffect(() => {
+    if (isPlaying) {
       const timer = setInterval(() => {
         setTimeLeft(prev => {
           if (prev <= 1) {

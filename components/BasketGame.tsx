@@ -10,9 +10,10 @@ interface BasketGameProps {
 
 export default function BasketGame({ poseState, onScoreUpdate }: BasketGameProps) {
   const [score, setScore] = useState(0);
+  const localScoreRef = useRef(0);
   const [gameState, setGameState] = useState<"playing" | "scored" | "missed">("playing");
   
-  const requestRef = useRef<number>();
+  const requestRef = useRef<number>(0);
   const hoopRef = useRef<HTMLDivElement>(null);
   const ballRef = useRef<HTMLImageElement>(null);
   const leftHandRef = useRef<HTMLDivElement>(null);
@@ -93,11 +94,9 @@ export default function BasketGame({ poseState, onScoreUpdate }: BasketGameProps
         const distanceToHoop = Math.abs(throwTargetX.current - hoopX.current);
         if (distanceToHoop < 8) { // Tolerance percentage
           setGameState("scored");
-          setScore(s => {
-            const nextScore = s + 1;
-            onScoreUpdate(nextScore);
-            return nextScore;
-          });
+          localScoreRef.current += 1;
+          setScore(localScoreRef.current);
+          onScoreUpdate(localScoreRef.current);
           // Increase speed slightly
           hoopSpeed.current = Math.min(0.8, hoopSpeed.current + 0.05);
         } else {

@@ -2,7 +2,7 @@
 
 import { useRef, useState, useEffect, useMemo } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useGLTF, Environment, Box, useAnimations, Html } from "@react-three/drei";
+import { useGLTF, Environment, Box, useAnimations, Html, Clone } from "@react-three/drei";
 import * as THREE from "three";
 import { PoseState } from "./PoseController";
 
@@ -13,7 +13,6 @@ const JUMP_VELOCITY = 10.5;
 const INITIAL_FORWARD_SPEED = 10;
 const OBSTACLE_SPAWN_Z = -55;
 const DESPAWN_Z = 12;
-const JETPACK_HEIGHT = 6.5;
 
 // ==========================================
 // Custom FPS Counter Component
@@ -105,22 +104,6 @@ class SoundManager {
     osc.stop(this.ctx.currentTime + 0.3);
   }
 
-  playJetpack() {
-    this.init();
-    if (!this.ctx) return;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.type = "sawtooth";
-    osc.frequency.setValueAtTime(220, this.ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(700, this.ctx.currentTime + 0.35);
-    gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.4);
-    osc.connect(gain);
-    gain.connect(this.ctx.destination);
-    osc.start();
-    osc.stop(this.ctx.currentTime + 0.4);
-  }
-
   playJump() {
     this.init();
     if (!this.ctx) return;
@@ -179,23 +162,18 @@ function Player({
   currentLane,
   isJumping,
   isSliding,
-  isJetpackActive,
-  isMagnetActive,
-  isWalking,
+    isWalking,
   onPlayerPosUpdate
 }: {
   currentLane: number;
   isJumping: boolean;
   isSliding: boolean;
-  isJetpackActive: boolean;
-  isMagnetActive: boolean;
-  isWalking: boolean;
+    isWalking: boolean;
   onPlayerPosUpdate: (pos: THREE.Vector3) => void;
 }) {
   const group = useRef<THREE.Group>(null);
   
   const model = useGLTF("/models/character.glb") as any;
-  const jetpackModel = useGLTF("/models/jetpack.glb") as any;
 
   const { actions } = useAnimations(model ? model.animations : [], group);
 
@@ -224,18 +202,18 @@ function Player({
   const prevSliding = useRef(false);
 
   useEffect(() => {
-    if (isJumping && !prevJumping.current && !isJetpackActive) {
+    if (isJumping && !prevJumping.current) {
       sounds.playJump();
     }
     prevJumping.current = isJumping;
-  }, [isJumping, isJetpackActive]);
+  }, [isJumping]);
 
   useEffect(() => {
-    if (isSliding && !prevSliding.current && !isJetpackActive) {
+    if (isSliding && !prevSliding.current) {
       sounds.playSlide();
     }
     prevSliding.current = isSliding;
-  }, [isSliding, isJetpackActive]);
+  }, [isSliding]);
 
   useFrame((state, delta) => {
     if (!group.current) return;
@@ -247,31 +225,25 @@ function Player({
       12 * delta
     );
 
-    // Jetpack Flying Logic
-    if (isJetpackActive) {
-      posY.current = THREE.MathUtils.lerp(posY.current, JETPACK_HEIGHT, 5 * delta);
-      velocityY.current = 0;
-    } else {
-      // Jumping Logic
-      if (isJumping && posY.current <= 0.05) {
-        velocityY.current = JUMP_VELOCITY;
-      }
+    // Jumping Logic
+    if (isJumping && posY.current <= 0.05) {
+      velocityY.current = JUMP_VELOCITY;
+    }
 
-      if (posY.current > 0 || velocityY.current !== 0) {
-        velocityY.current += GRAVITY * delta;
-        posY.current += velocityY.current * delta;
+    if (posY.current > 0 || velocityY.current !== 0) {
+      velocityY.current += GRAVITY * delta;
+      posY.current += velocityY.current * delta;
 
-        if (posY.current <= 0) {
-          posY.current = 0;
-          velocityY.current = 0;
-        }
+      if (posY.current <= 0) {
+        posY.current = 0;
+        velocityY.current = 0;
       }
     }
 
     group.current.position.y = posY.current;
 
     // Slide scaling
-    if (isSliding && !isJetpackActive && posY.current <= 0.1) {
+    if (isSliding && posY.current <= 0.1) {
       group.current.scale.y = THREE.MathUtils.lerp(group.current.scale.y, 0.45, 15 * delta);
       group.current.rotation.x = THREE.MathUtils.lerp(group.current.rotation.x, 0.35, 15 * delta);
     } else {
@@ -296,51 +268,10 @@ function Player({
           <meshStandardMaterial color="#3b82f6" metalness={0.5} roughness={0.3} />
         </Box>
       )}
-
-      {/* Jetpack Visual Effect */}
-      {isJetpackActive && (
-        <group position={[0, 1.2, -0.3]}>
-          {jetpackModel && jetpackModel.scene ? (
-            <primitive object={jetpackModel.scene} scale={0.5} position={[0, 0, 0]} />
-          ) : (
-            <>
-              <mesh position={[-0.3, 0, 0]}>
-                <cylinderGeometry args={[0.15, 0.12, 0.6, 12]} />
-                <meshStandardMaterial color="#333333" metalness={0.9} />
-              </mesh>
-              <mesh position={[0.3, 0, 0]}>
-                <cylinderGeometry args={[0.15, 0.12, 0.6, 12]} />
-                <meshStandardMaterial color="#333333" metalness={0.9} />
-              </mesh>
-            </>
-          )}
-          {/* Flame Jets */}
-          <mesh position={[-0.3, -0.5, 0]} rotation={[Math.PI, 0, 0]}>
-            <coneGeometry args={[0.15, 0.5, 12]} />
-            <meshBasicMaterial color="#ffaa00" />
-          </mesh>
-          <mesh position={[0.3, -0.5, 0]} rotation={[Math.PI, 0, 0]}>
-            <coneGeometry args={[0.15, 0.5, 12]} />
-            <meshBasicMaterial color="#ffaa00" />
-          </mesh>
-          <pointLight color="#ffaa00" intensity={3} distance={5} />
-        </group>
-      )}
-
-      {/* Magnet Active Aura */}
-      {isMagnetActive && (
-        <mesh position={[0, 1, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[1.5, 0.08, 16, 32]} />
-          <meshBasicMaterial color="#38bdf8" transparent opacity={0.7} />
-        </mesh>
-      )}
     </group>
   );
 }
 
-// ==========================================
-// Coins & Collectibles Components
-// ==========================================
 interface CoinData {
   id: number;
   lane: number;
@@ -348,24 +279,25 @@ interface CoinData {
   y: number;
 }
 
+// ==========================================
+// Coin Item Component
+// ==========================================
 function CoinItem({
   lane,
   z,
   y,
   speed,
-  isMagnetActive,
-  playerPos,
+  onRemove,
   onCollect,
-  onRemove
+  playerPos
 }: {
   lane: number;
   z: number;
   y: number;
   speed: number;
-  isMagnetActive: boolean;
-  playerPos: THREE.Vector3;
-  onCollect: () => void;
   onRemove: () => void;
+  onCollect: () => void;
+  playerPos: THREE.Vector3;
 }) {
   const ref = useRef<THREE.Group>(null);
 
@@ -375,12 +307,7 @@ function CoinItem({
     // Movement forward
     ref.current.position.z += speed * delta;
 
-    // Magnet Pulling Effect
-    if (isMagnetActive && ref.current.position.z > -25) {
-      const targetPos = new THREE.Vector3(playerPos.x, playerPos.y + 0.8, playerPos.z);
-      ref.current.position.lerp(targetPos, 14 * delta);
-    }
-
+    
     // Spin animation
     ref.current.rotation.y += 4 * delta;
 
@@ -408,70 +335,6 @@ function CoinItem({
   );
 }
 
-// Powerup Item (Magnet / Jetpack)
-interface PowerupData {
-  id: number;
-  type: "magnet" | "jetpack";
-  lane: number;
-  z: number;
-}
-
-function PowerupItem({
-  type,
-  lane,
-  z,
-  speed,
-  playerPos,
-  onCollect,
-  onRemove
-}: {
-  type: "magnet" | "jetpack";
-  lane: number;
-  z: number;
-  speed: number;
-  playerPos: THREE.Vector3;
-  onCollect: () => void;
-  onRemove: () => void;
-}) {
-  const ref = useRef<THREE.Group>(null);
-
-  useFrame((state, delta) => {
-    if (!ref.current) return;
-
-    ref.current.position.z += speed * delta;
-    ref.current.rotation.y += 3 * delta;
-
-    if (ref.current.position.z > DESPAWN_Z) {
-      onRemove();
-      return;
-    }
-
-    const distance = ref.current.position.distanceTo(playerPos);
-    if (distance < 1.5) {
-      if (type === "magnet") sounds.playMagnet();
-      else sounds.playJetpack();
-      onCollect();
-    }
-  });
-
-  return (
-    <group ref={ref} position={[lane * LANE_WIDTH, 0.8, z]}>
-      {type === "magnet" ? (
-        <mesh>
-          <torusGeometry args={[0.4, 0.15, 16, 16, Math.PI]} />
-          <meshStandardMaterial color="#f43f5e" metalness={0.8} roughness={0.2} emissive="#f43f5e" emissiveIntensity={0.5} />
-        </mesh>
-      ) : (
-        <mesh>
-          <boxGeometry args={[0.5, 0.7, 0.4]} />
-          <meshStandardMaterial color="#38bdf8" metalness={0.9} roughness={0.1} emissive="#38bdf8" emissiveIntensity={0.5} />
-        </mesh>
-      )}
-      <pointLight color={type === "magnet" ? "#f43f5e" : "#38bdf8"} intensity={2} distance={3} />
-    </group>
-  );
-}
-
 // ==========================================
 // Obstacles Component
 // ==========================================
@@ -484,6 +347,7 @@ interface ObstacleData {
   z: number;
 }
 
+
 function Obstacle({
   type,
   lane,
@@ -493,17 +357,15 @@ function Obstacle({
   onHitPlayer,
   playerPos,
   isSliding,
-  isJetpackActive
 }: {
   type: ObstacleType;
   lane: number;
   z: number;
   speed: number;
   onRemove: () => void;
-  onHitPlayer: () => void;
+  onHitPlayer: (type: ObstacleType) => void;
   playerPos: THREE.Vector3;
   isSliding: boolean;
-  isJetpackActive: boolean;
 }) {
   const ref = useRef<THREE.Group>(null);
   const hitTriggered = useRef(false);
@@ -516,9 +378,6 @@ function Obstacle({
       onRemove();
       return;
     }
-
-    // If Jetpack is active, player flies high above all ground obstacles
-    if (isJetpackActive) return;
 
     // Collision Detection Logic
     const obZ = ref.current.position.z;
@@ -543,30 +402,14 @@ function Obstacle({
       if (isHit) {
         hitTriggered.current = true;
         sounds.playCrash();
-        onHitPlayer();
+        onHitPlayer(type);
       }
     }
   });
 
   return (
     <group ref={ref} position={[lane * LANE_WIDTH, 0, z]}>
-      {type === "low" && (
-        /* Low Wooden Hurdle Barrier */
-        <group position={[0, 0.4, 0]}>
-          <mesh position={[0, 0, 0]}>
-            <boxGeometry args={[2.2, 0.7, 0.3]} />
-            <meshStandardMaterial color="#d97706" roughness={0.7} />
-          </mesh>
-          <mesh position={[-0.9, -0.2, 0]}>
-            <cylinderGeometry args={[0.1, 0.1, 0.5, 12]} />
-            <meshStandardMaterial color="#78350f" />
-          </mesh>
-          <mesh position={[0.9, -0.2, 0]}>
-            <cylinderGeometry args={[0.1, 0.1, 0.5, 12]} />
-            <meshStandardMaterial color="#78350f" />
-          </mesh>
-        </group>
-      )}
+      
 
       {type === "high" && (
         /* High Overhead Barricade Signboard */
@@ -587,23 +430,237 @@ function Obstacle({
         </group>
       )}
 
-      {type === "full" && (
-        /* Full Turret / Cargo Crate */
-        <group position={[0, 0.9, 0]}>
-          <mesh>
-            <boxGeometry args={[2.0, 1.8, 1.8]} />
-            <meshStandardMaterial color="#4b5563" metalness={0.6} roughness={0.4} />
-          </mesh>
-          <mesh position={[0, 0, 1.0]} rotation={[Math.PI / 2, 0, 0]}>
-            <cylinderGeometry args={[0.2, 0.2, 0.8, 16]} />
-            <meshStandardMaterial color="#1f2937" metalness={0.9} />
-          </mesh>
-          <mesh position={[0, 0.5, 1.45]}>
-            <sphereGeometry args={[0.25, 16, 16]} />
-            <meshBasicMaterial color="#ef4444" />
-          </mesh>
+
+    </group>
+  );
+}
+
+// ==========================================
+// City Scenery Component
+// ==========================================
+function BuildingMesh({ b, windowTex, brickTex }: { b: any; windowTex: THREE.Texture; brickTex: THREE.Texture }) {
+  const map = useMemo(() => {
+    const tex = windowTex.clone();
+    tex.repeat.set(Math.ceil(b.width / 6), Math.ceil(b.height / 6));
+    tex.needsUpdate = true;
+    return tex;
+  }, [windowTex, b.width, b.height]);
+
+  const bMap = useMemo(() => {
+    const tex = brickTex.clone();
+    tex.repeat.set(Math.ceil(b.width / 4), Math.ceil(b.height / 4));
+    tex.needsUpdate = true;
+    return tex;
+  }, [brickTex, b.width, b.height]);
+
+  if (b.type === "skyscraper") {
+    return (
+      <group position={[b.x, 0, 0]}>
+        <mesh position={[0, b.height / 2, 0]}>
+          <boxGeometry args={[b.width, b.height, b.depth]} />
+          <meshStandardMaterial color={b.color} metalness={0.9} roughness={0.1} map={map} />
+        </mesh>
+        <mesh position={[0, b.height + 2, 0]}>
+          <cylinderGeometry args={[0.2, 0.2, 4]} />
+          <meshStandardMaterial color="#64748b" />
+        </mesh>
+      </group>
+    );
+  }
+
+  if (b.type === "house") {
+    return (
+      <group position={[b.x, 0, 0]}>
+        <mesh position={[0, b.height / 2, 0]}>
+          <boxGeometry args={[b.width, b.height, b.depth]} />
+          <meshStandardMaterial color={b.color} roughness={0.9} map={bMap} />
+        </mesh>
+        <mesh position={[0, b.height + 1.5, 0]} rotation={[0, Math.PI/4, 0]}>
+          <cylinderGeometry args={[0, b.width * 0.8, 3, 4]} />
+          <meshStandardMaterial color="#7f1d1d" roughness={0.9} />
+        </mesh>
+      </group>
+    );
+  }
+
+  if (b.type === "store") {
+    return (
+      <group position={[b.x, 0, 0]}>
+        <mesh position={[0, b.height / 2, 0]}>
+          <boxGeometry args={[b.width, b.height, b.depth]} />
+          <meshStandardMaterial color={b.color} roughness={0.9} />
+        </mesh>
+        <mesh position={[b.isLeft ? 1 : -1, 2, 0]}>
+          <boxGeometry args={[b.width + 0.1, 3, b.depth - 2]} />
+          <meshStandardMaterial color="#38bdf8" metalness={0.9} roughness={0.1} />
+        </mesh>
+        <mesh position={[b.isLeft ? 1 : -1, 4, 0]}>
+          <boxGeometry args={[b.width + 0.2, 1, b.depth - 1]} />
+          <meshStandardMaterial color="#ef4444" roughness={0.8} />
+        </mesh>
+      </group>
+    );
+  }
+
+  // Apartment
+  return (
+    <group position={[b.x, 0, 0]}>
+      <mesh position={[0, b.height / 2, 0]}>
+        <boxGeometry args={[b.width, b.height, b.depth]} />
+        <meshStandardMaterial color={b.color} roughness={0.8} map={map} />
+      </mesh>
+      <mesh position={[0, b.height + 0.5, 0]}>
+        <boxGeometry args={[b.width + 1.5, 1, b.depth + 1.5]} />
+        <meshStandardMaterial color="#334155" roughness={0.9} />
+      </mesh>
+    </group>
+  );
+}
+
+function CityScenery({ speed }: { speed: number }) {
+  const groupRef = useRef<THREE.Group>(null);
+  
+  const windowTex = useMemo(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext("2d");
+    if (ctx) {
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, 512, 512);
+      ctx.fillStyle = "#0f172a";
+      for (let y = 32; y < 512; y += 80) {
+        for (let x = 32; x < 512; x += 80) {
+          ctx.fillRect(x, y, 40, 50);
+          ctx.fillStyle = "#cbd5e1";
+          ctx.fillRect(x + 18, y, 4, 50);
+          ctx.fillRect(x, y + 25, 40, 4);
+          ctx.fillStyle = "#0f172a";
+        }
+      }
+    }
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    return tex;
+  }, []);
+
+  const brickTex = useMemo(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 128;
+    canvas.height = 128;
+    const ctx = canvas.getContext("2d");
+    if (ctx) {
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, 128, 128);
+      ctx.fillStyle = "#cccccc";
+      for (let y = 0; y < 128; y += 16) {
+        ctx.fillRect(0, y, 128, 2);
+        const offsetX = (y / 16) % 2 === 0 ? 0 : 16;
+        for (let x = 0; x < 128; x += 32) {
+          ctx.fillRect(x + offsetX, y, 2, 16);
+        }
+      }
+    }
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    return tex;
+  }, []);
+
+  const initBuildings = useMemo(() => {
+    const arr = [];
+    let currentLeftZ = 50;
+    let currentRightZ = 50;
+    const colors = ["#f8fafc", "#e2e8f0", "#cbd5e1", "#fef3c7", "#e0f2fe", "#f1f5f9"];
+    const types = ["skyscraper", "apartment", "store", "house"];
+
+    const generateBuilding = (isLeft: boolean, zStart: number) => {
+      const type = types[Math.floor(Math.random() * types.length)];
+      let height = 20;
+      let width = 10 + Math.random() * 10;
+      let depth = 15 + Math.random() * 15;
+      
+      if (type === "skyscraper") {
+        height = 50 + Math.random() * 50;
+        width = 15 + Math.random() * 10;
+        depth = 15 + Math.random() * 10;
+      } else if (type === "house") {
+        height = 10 + Math.random() * 5;
+        width = 10 + Math.random() * 5;
+      } else if (type === "store") {
+        height = 12 + Math.random() * 8;
+      } else {
+        height = 20 + Math.random() * 30; // apartment
+      }
+
+      return {
+        isLeft,
+        type,
+        width,
+        depth,
+        height,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        z: zStart - depth / 2,
+        x: isLeft ? (-12 - width / 2) : (12 + width / 2)
+      };
+    };
+
+    for (let i = 0; i < 40; i++) {
+      const leftB = generateBuilding(true, currentLeftZ);
+      arr.push(leftB);
+      currentLeftZ -= leftB.depth;
+
+      const rightB = generateBuilding(false, currentRightZ);
+      arr.push(rightB);
+      currentRightZ -= rightB.depth;
+    }
+    return arr;
+  }, []);
+
+  useFrame((state, delta) => {
+    if (!groupRef.current) return;
+    
+    let minLeftZ = 1000;
+    let minLeftDepth = 0;
+    let minRightZ = 1000;
+    let minRightDepth = 0;
+    
+    groupRef.current.children.forEach((grp: any) => {
+       if (grp.userData.isLeft && grp.position.z < minLeftZ) {
+         minLeftZ = grp.position.z;
+         minLeftDepth = grp.userData.depth;
+       }
+       if (!grp.userData.isLeft && grp.position.z < minRightZ) {
+         minRightZ = grp.position.z;
+         minRightDepth = grp.userData.depth;
+       }
+    });
+
+    groupRef.current.children.forEach((grp: any) => {
+      grp.position.z += speed * delta;
+      
+      if (grp.position.z - grp.userData.depth / 2 > 60) {
+        if (grp.userData.isLeft) {
+          grp.position.z = minLeftZ - minLeftDepth / 2 - grp.userData.depth / 2;
+          minLeftZ = grp.position.z;
+          minLeftDepth = grp.userData.depth;
+        } else {
+          grp.position.z = minRightZ - minRightDepth / 2 - grp.userData.depth / 2;
+          minRightZ = grp.position.z;
+          minRightDepth = grp.userData.depth;
+        }
+      }
+    });
+  });
+
+  return (
+    <group ref={groupRef}>
+      {initBuildings.map((b, i) => (
+        <group key={i} position={[0, 0, b.z]} userData={{ isLeft: b.isLeft, depth: b.depth }}>
+           <BuildingMesh b={b} windowTex={windowTex} brickTex={brickTex} />
         </group>
-      )}
+      ))}
     </group>
   );
 }
@@ -653,23 +710,13 @@ function EndlessGround({ speed }: { speed: number }) {
     return tex;
   }, []);
 
-  // Surrounding Ground Tarmac
+  // Surrounding Natural Grass Texture
   const surroundingTex = useMemo(() => {
-    const canvas = document.createElement("canvas");
-    canvas.width = 256;
-    canvas.height = 256;
-    const context = canvas.getContext("2d");
-    if (context) {
-      context.fillStyle = "#0f172a";
-      context.fillRect(0, 0, 256, 256);
-      context.strokeStyle = "#1e293b";
-      context.lineWidth = 2;
-      context.strokeRect(0, 0, 256, 256);
-    }
-    const tex = new THREE.CanvasTexture(canvas);
+    const loader = new THREE.TextureLoader();
+    const tex = loader.load("/textures/grass.jpg");
     tex.wrapS = THREE.RepeatWrapping;
     tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(40, 40);
+    tex.repeat.set(20, 20);
     return tex;
   }, []);
 
@@ -680,10 +727,10 @@ function EndlessGround({ speed }: { speed: number }) {
 
   return (
     <group position={[0, -0.5, -25]} rotation={[-Math.PI / 2, 0, 0]}>
-      {/* Vast Surrounding Tarmac */}
+      {/* Vast Surrounding Grass */}
       <mesh position={[0, 0, -0.01]}>
         <planeGeometry args={[200, 200]} />
-        <meshStandardMaterial map={surroundingTex} roughness={0.9} />
+        <meshStandardMaterial map={surroundingTex} roughness={1.0} color="#ffffff" />
       </mesh>
 
       {/* Main 3-Lane Track */}
@@ -696,18 +743,18 @@ function EndlessGround({ speed }: { speed: number }) {
 }
 
 // Camera Follow Controller
-function DynamicCamera({ isJetpackActive, playerPos }: { isJetpackActive: boolean; playerPos: THREE.Vector3 }) {
+function DynamicCamera({ playerPos }: { playerPos: THREE.Vector3 }) {
   const { camera } = useThree();
 
   useFrame((state, delta) => {
-    const targetY = isJetpackActive ? 10 : 4.5;
-    const targetZ = isJetpackActive ? 9.5 : 6.5;
+    const targetY = 4.5;
+    const targetZ = 6.5;
     const targetX = playerPos.x * 0.4;
 
     camera.position.x = THREE.MathUtils.lerp(camera.position.x, targetX, 5 * delta);
     camera.position.y = THREE.MathUtils.lerp(camera.position.y, targetY, 4 * delta);
     camera.position.z = THREE.MathUtils.lerp(camera.position.z, targetZ, 4 * delta);
-    camera.lookAt(playerPos.x * 0.3, isJetpackActive ? 5 : 1.5, -8);
+    camera.lookAt(playerPos.x * 0.3, 1.5, -8);
   });
 
   return null;
@@ -721,23 +768,18 @@ export default function Game({
   onGameOver,
   onScoreUpdate,
   onCoinsUpdate,
-  onPowerupUpdate
-}: {
+  }: {
   poseState: PoseState;
-  onGameOver: () => void;
+  onGameOver: (reason: string) => void;
   onScoreUpdate: (score: number) => void;
   onCoinsUpdate: (coins: number) => void;
-  onPowerupUpdate: (magnetTime: number, jetpackTime: number) => void;
-}) {
+  }) {
   const [obstacles, setObstacles] = useState<ObstacleData[]>([]);
   const [coins, setCoins] = useState<CoinData[]>([]);
-  const [powerups, setPowerups] = useState<PowerupData[]>([]);
-
+  
   const [playerPos, setPlayerPos] = useState<THREE.Vector3>(new THREE.Vector3(0, 0, 0));
 
-  const [magnetTimer, setMagnetTimer] = useState<number>(0);
-  const [jetpackTimer, setJetpackTimer] = useState<number>(0);
-
+  
   const scoreRef = useRef(0);
   const coinsRef = useRef(0);
 
@@ -750,9 +792,7 @@ export default function Game({
   const isJumping = poseState.isJumping;
   const isSliding = poseState.isSliding;
 
-  const isJetpackActive = jetpackTimer > 0;
-  const isMagnetActive = magnetTimer > 0;
-
+  
   const [currentSpeed, setCurrentSpeed] = useState(INITIAL_FORWARD_SPEED);
 
   // Speed acceleration over time
@@ -764,20 +804,7 @@ export default function Game({
     return () => clearInterval(accelInterval);
   }, [isWalking]);
 
-  // Powerup timers countdown
-  useEffect(() => {
-    const timerInterval = setInterval(() => {
-      setMagnetTimer((prev) => Math.max(0, prev - 1));
-      setJetpackTimer((prev) => Math.max(0, prev - 1));
-    }, 1000);
-
-    return () => clearInterval(timerInterval);
-  }, []);
-
-  useEffect(() => {
-    onPowerupUpdate(magnetTimer, jetpackTimer);
-  }, [magnetTimer, jetpackTimer, onPowerupUpdate]);
-
+  
   // Game Loop (Spawning & Scoring)
   useEffect(() => {
     const spawnInterval = setInterval(() => {
@@ -787,9 +814,9 @@ export default function Game({
       scoreRef.current += 15;
       onScoreUpdate(scoreRef.current);
 
-      // Spawn Obstacles (Only if not jetpacking)
-      if (!isJetpackActive && Math.random() > 0.25) {
-        const types: ObstacleType[] = ["low", "high", "full"];
+      // Spawn Obstacles
+      if (Math.random() > 0.25) {
+        const types: ObstacleType[] = ["high"];
         const randomType = types[Math.floor(Math.random() * types.length)];
         const randomLane = Math.floor(Math.random() * 3) - 1;
 
@@ -801,7 +828,7 @@ export default function Game({
 
       // Spawn Coins
       const coinLane = Math.floor(Math.random() * 3) - 1;
-      const coinY = isJetpackActive ? JETPACK_HEIGHT : 0.6;
+      const coinY = 0.6;
       for (let i = 0; i < 3; i++) {
         setCoins((prev) => [
           ...prev,
@@ -809,20 +836,11 @@ export default function Game({
         ]);
       }
 
-      // Spawn Powerups randomly
-      if (Math.random() > 0.75) {
-        const pType: "magnet" | "jetpack" = Math.random() > 0.5 ? "magnet" : "jetpack";
-        const pLane = Math.floor(Math.random() * 3) - 1;
-        setPowerups((prev) => [
-          ...prev,
-          { id: nextPowerupId.current++, type: pType, lane: pLane, z: OBSTACLE_SPAWN_Z - 5 }
-        ]);
-      }
 
     }, 1400);
 
     return () => clearInterval(spawnInterval);
-  }, [isWalking, isJetpackActive, onScoreUpdate]);
+  }, [isWalking, onScoreUpdate]);
 
   const handleCollectCoin = (id: number) => {
     setCoins((prev) => prev.filter((c) => c.id !== id));
@@ -832,40 +850,36 @@ export default function Game({
     onScoreUpdate(scoreRef.current);
   };
 
-  const handleCollectPowerup = (id: number, type: "magnet" | "jetpack") => {
-    setPowerups((prev) => prev.filter((p) => p.id !== id));
-    if (type === "magnet") {
-      setMagnetTimer(9);
-    } else {
-      setJetpackTimer(8);
-    }
-  };
-
-  const handleHitObstacle = () => {
+  
+  const handleHitObstacle = (type: ObstacleType) => {
     // Trigger Game Over on collision
-    onGameOver();
+    let reason = "rintangan";
+    if (type === "high") reason = "palang / papan rambu";
+    if (type === "full") reason = "kendaraan / benda di jalan";
+    if (type === "low") reason = "palang bawah";
+    
+    onGameOver(reason);
   };
 
   return (
     <Canvas camera={{ position: [0, 4.5, 6.5], fov: 60 }}>
+      <color attach="background" args={["#87ceeb"]} />
       <CustomFPS />
       {/* Fog atmosphere for horizon blending */}
-      <fog attach="fog" args={["#0f172a", 20, 75]} />
+      <fog attach="fog" args={["#87ceeb", 20, 90]} />
 
-      <ambientLight intensity={0.7} />
-      <directionalLight position={[15, 25, 10]} intensity={1.3} castShadow />
+      <ambientLight intensity={0.8} />
+      <directionalLight position={[15, 25, 10]} intensity={1.5} color="#fff8e7" castShadow />
       
-      <Environment preset="night" />
+      <Environment preset="city" />
 
-      <DynamicCamera isJetpackActive={isJetpackActive} playerPos={playerPos} />
+      <DynamicCamera playerPos={playerPos} />
 
       <Player
         currentLane={lane}
         isJumping={isJumping}
         isSliding={isSliding}
-        isJetpackActive={isJetpackActive}
-        isMagnetActive={isMagnetActive}
-        isWalking={isWalking}
+                isWalking={isWalking}
         onPlayerPosUpdate={setPlayerPos}
       />
 
@@ -881,7 +895,6 @@ export default function Game({
           onHitPlayer={handleHitObstacle}
           playerPos={playerPos}
           isSliding={isSliding}
-          isJetpackActive={isJetpackActive}
         />
       ))}
 
@@ -893,27 +906,15 @@ export default function Game({
           z={coin.z}
           y={coin.y}
           speed={isWalking ? currentSpeed : 0}
-          isMagnetActive={isMagnetActive}
-          playerPos={playerPos}
+                    playerPos={playerPos}
           onCollect={() => handleCollectCoin(coin.id)}
           onRemove={() => setCoins((prev) => prev.filter((c) => c.id !== coin.id))}
         />
       ))}
 
-      {/* Powerups */}
-      {powerups.map((p) => (
-        <PowerupItem
-          key={p.id}
-          type={p.type}
-          lane={p.lane}
-          z={p.z}
-          speed={isWalking ? currentSpeed : 0}
-          playerPos={playerPos}
-          onCollect={() => handleCollectPowerup(p.id, p.type)}
-          onRemove={() => setPowerups((prev) => prev.filter((item) => item.id !== p.id))}
-        />
-      ))}
 
+
+      <CityScenery speed={isWalking ? currentSpeed : 0} />
       <EndlessGround speed={isWalking ? currentSpeed : 0} />
     </Canvas>
   );
