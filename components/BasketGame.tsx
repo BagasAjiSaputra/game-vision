@@ -6,9 +6,10 @@ import { BasketPoseState } from "./BasketPoseController";
 interface BasketGameProps {
   poseState: BasketPoseState | null;
   onScoreUpdate: (score: number) => void;
+  onMiss?: () => void;
 }
 
-export default function BasketGame({ poseState, onScoreUpdate }: BasketGameProps) {
+export default function BasketGame({ poseState, onScoreUpdate, onMiss }: BasketGameProps) {
   const [score, setScore] = useState(0);
   const localScoreRef = useRef(0);
   const [gameState, setGameState] = useState<"playing" | "scored" | "missed">("playing");
@@ -101,6 +102,7 @@ export default function BasketGame({ poseState, onScoreUpdate }: BasketGameProps
           hoopSpeed.current = Math.min(0.8, hoopSpeed.current + 0.05);
         } else {
           setGameState("missed");
+          if (onMiss) onMiss();
         }
         throwProgress.current = 2.1; // Move to end state
       } else if (throwProgress.current > 2) {

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Activity, RefreshCw, ArrowRight, Trophy } from "lucide-react";
+import { getLeaderboards } from "@/app/actions";
 
 export interface LeaderboardEntry {
   name: string;
@@ -12,8 +13,6 @@ export interface LeaderboardEntry {
 }
 
 export default function Home() {
-  const [playerName, setPlayerName] = useState("");
-  const [isNameSet, setIsNameSet] = useState(false);
   const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
   
   const [birdLeaderboard, setBirdLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -24,65 +23,48 @@ export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
-    const savedName = localStorage.getItem("playerName");
-    if (savedName) {
-      setPlayerName(savedName);
-      setIsNameSet(true);
-    }
-    
-    // Load leaderboards
-    try {
-      const birdRaw = localStorage.getItem("birdRunnerLeaderboard");
-      const endlessRaw = localStorage.getItem("endlessRunnerLeaderboard");
-      const basketRaw = localStorage.getItem("basketShootLeaderboard");
-      
-      const bird: LeaderboardEntry[] = birdRaw ? JSON.parse(birdRaw) : [];
-      const endless: LeaderboardEntry[] = endlessRaw ? JSON.parse(endlessRaw) : [];
-      const basket: LeaderboardEntry[] = basketRaw ? JSON.parse(basketRaw) : [];
-
-      setBirdLeaderboard(bird);
-      setEndlessLeaderboard(endless);
-      setBasketLeaderboard(basket);
-      
-      // Calculate overall average
-      const playerScores: Record<string, {bird: number, endless: number, basket: number}> = {};
-      
-      [...bird, ...endless, ...basket].forEach(entry => {
-        if (!playerScores[entry.name]) {
-          playerScores[entry.name] = { bird: 0, endless: 0, basket: 0 };
+    // Load leaderboards from Supabase
+    const fetchLeaderboards = async () => {
+      try {
+        const response = await getLeaderboards();
+        if (response.success && response.data) {
+          const bird = response.data.bird || [];
+          const endless = response.data.endless || [];
+          const basket = response.data.basket || [];
+          
+          setBirdLeaderboard(bird);
+          setEndlessLeaderboard(endless);
+          setBasketLeaderboard(basket);
+          
+          // Calculate overall average
+          const playerScores: Record<string, {bird: number, endless: number, basket: number}> = {};
+          
+          [...bird, ...endless, ...basket].forEach(entry => {
+            if (!playerScores[entry.name]) {
+              playerScores[entry.name] = { bird: 0, endless: 0, basket: 0 };
+            }
+          });
+          
+          bird.forEach(entry => playerScores[entry.name].bird = Math.max(playerScores[entry.name].bird, entry.score));
+          endless.forEach(entry => playerScores[entry.name].endless = Math.max(playerScores[entry.name].endless, entry.score));
+          basket.forEach(entry => playerScores[entry.name].basket = Math.max(playerScores[entry.name].basket, entry.score));
+          
+          const overall = Object.entries(playerScores).map(([name, scores]) => {
+            return {
+              name,
+              average: Math.round((scores.bird + scores.endless + scores.basket) / 3)
+            };
+          }).sort((a, b) => b.average - a.average).slice(0, 5);
+          
+          setOverallLeaderboard(overall);
         }
-      });
-      
-      bird.forEach(entry => playerScores[entry.name].bird = Math.max(playerScores[entry.name].bird, entry.score));
-      endless.forEach(entry => playerScores[entry.name].endless = Math.max(playerScores[entry.name].endless, entry.score));
-      basket.forEach(entry => playerScores[entry.name].basket = Math.max(playerScores[entry.name].basket, entry.score));
-      
-      const overall = Object.entries(playerScores).map(([name, scores]) => {
-        return {
-          name,
-          average: Math.round((scores.bird + scores.endless + scores.basket) / 3)
-        };
-      }).sort((a, b) => b.average - a.average).slice(0, 5);
-      
-      setOverallLeaderboard(overall);
-
-    } catch (e) {
-      console.error("Failed to load leaderboards", e);
-    }
+      } catch (e) {
+        console.error("Failed to load leaderboards", e);
+      }
+    };
+    
+    fetchLeaderboards();
   }, []);
-
-  const handleSaveName = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (playerName.trim()) {
-      localStorage.setItem("playerName", playerName.trim());
-      setIsNameSet(true);
-    }
-  };
-
-  const handleChangeName = () => {
-    setIsNameSet(false);
-    localStorage.removeItem("playerName");
-  };
 
   return (
     <main className="flex min-h-screen flex-col bg-[#0a0d0c] text-white font-sans px-6 py-12 md:px-12 md:py-16 w-full">
@@ -95,41 +77,12 @@ export default function Home() {
           </div>
           <div>
             <p className="text-[#a0a0a0] text-xs">Selamat Pagi!</p>
-            <h1 className="text-lg font-bold">{isNameSet ? playerName : "Pemain"}</h1>
+            <h1 className="text-lg font-bold">Pemain</h1>
           </div>
         </div>
-        
-        {isNameSet && (
-          <button 
-            onClick={handleChangeName}
-            className="w-10 h-10 rounded-full bg-[#1c1e1c] flex items-center justify-center text-[#a0a0a0] border border-white/5 hover:border-[#d4ff00]/50 hover:text-white transition-colors"
-          >
-            <RefreshCw className="w-4 h-4" />
-          </button>
-        )}
       </div>
 
-      {!isNameSet ? (
-        <div className="flex flex-col flex-1 justify-center max-w-xl mx-auto w-full">
-           <h2 className="text-3xl font-bold mb-6 tracking-tight">Siapa yang<br/>bermain hari ini?</h2>
-           <form onSubmit={handleSaveName} className="flex gap-2">
-             <input
-               type="text"
-               value={playerName}
-               onChange={(e) => setPlayerName(e.target.value.toUpperCase())}
-               className="flex-1 bg-[#1c1e1c] border border-white/5 rounded-full px-6 py-4 text-white font-bold focus:outline-none focus:border-[#d4ff00] transition-colors placeholder:text-[#555] uppercase"
-               placeholder="MASUKKAN NAMA"
-               required
-               autoFocus
-               maxLength={15}
-             />
-             <button type="submit" className="w-14 h-14 rounded-full bg-[#d4ff00] text-black flex items-center justify-center font-bold hover:scale-105 transition-transform shrink-0">
-               <ArrowRight className="w-6 h-6" />
-             </button>
-           </form>
-        </div>
-      ) : (
-        <div className="flex flex-col h-full w-full pb-20">
+      <div className="flex flex-col h-full w-full pb-20">
           
           <div className="flex justify-between items-end mb-6">
             <h2 className="text-2xl font-bold">Pilih permainan<br/><span className="text-[#d4ff00]">Favoritmu</span></h2>
@@ -205,7 +158,6 @@ export default function Home() {
           </div>
 
         </div>
-      )}
 
       {/* Leaderboard Modal */}
       {isLeaderboardOpen && (

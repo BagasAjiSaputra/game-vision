@@ -5,7 +5,7 @@ import BirdGame from "@/components/BirdGame";
 import BirdPoseController, { BirdPoseState } from "@/components/BirdPoseController";
 import Link from "next/link";
 import { Activity, Volume2, VolumeX, AlertTriangle, Hand, ArrowLeft } from "lucide-react";
-import { saveGameScore } from "@/app/actions";
+import { saveGameScore, getTopScoresByGame } from "@/app/actions";
 
 export interface LeaderboardEntry {
   name: string;
@@ -57,15 +57,19 @@ export default function BirdRunner() {
     localStorage.setItem("gameVolume", volume.toString());
   }, [volume, isMuted]);
 
-  useEffect(() => {
-    const saved = localStorage.getItem("birdRunnerLeaderboard");
-    if (saved) {
-      try {
-        setLeaderboard(JSON.parse(saved));
-      } catch (e) {
-        console.error("Failed to load leaderboard");
+  const fetchLeaderboard = async () => {
+    try {
+      const response = await getTopScoresByGame('bird_runner');
+      if (response.success && response.data) {
+        setLeaderboard(response.data);
       }
+    } catch (e) {
+      console.error("Failed to load leaderboard", e);
     }
+  };
+
+  useEffect(() => {
+    fetchLeaderboard();
   }, []);
 
   const startGame = () => {
@@ -81,24 +85,7 @@ export default function BirdRunner() {
     setIsPlaying(false);
     setIsGameOver(true);
     if (reason) setGameOverReason(reason);
-    
-    const isTop5 = leaderboard.length < 5 || score > (leaderboard[leaderboard.length - 1]?.score || 0);
-    if (isTop5 && score > 0 && playerName.trim()) {
-      const newEntry: LeaderboardEntry = {
-        name: playerName.substring(0, 20).toUpperCase(),
-        score,
-        date: new Date().toLocaleDateString()
-      };
-      
-      const newLeaderboard = [...leaderboard, newEntry]
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 5);
-        
-      setLeaderboard(newLeaderboard);
-      localStorage.setItem("birdRunnerLeaderboard", JSON.stringify(newLeaderboard));
-    }
-
-    if (score > 0 && playerName.trim()) {
+    if (score >= 0 && playerName.trim()) {
       try {
         const response = await saveGameScore(
           playerName.substring(0, 20).toUpperCase(),
@@ -111,6 +98,7 @@ export default function BirdRunner() {
           alert("Gagal menyimpan skor ke database: " + response.error);
         } else {
           console.log("Skor berhasil disimpan ke Supabase via Server Action!");
+          await fetchLeaderboard();
         }
       } catch (err) {
         console.error("Failed to call saveGameScore action", err);

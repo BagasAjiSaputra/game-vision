@@ -5,7 +5,7 @@ import BasketPoseController, { BasketPoseState } from "@/components/BasketPoseCo
 import BasketGame from "@/components/BasketGame";
 import Link from "next/link";
 import { Activity, Volume2, VolumeX, Clock, ArrowDown, ArrowUp, Hand, ArrowLeft } from "lucide-react";
-import { saveGameScore } from "@/app/actions";
+import { saveGameScore, getTopScoresByGame } from "@/app/actions";
 
 export interface LeaderboardEntry {
   name: string;
@@ -25,6 +25,8 @@ export default function BasketShootPage() {
   const [playerName, setPlayerName] = useState("");
   const [volume, setVolume] = useState(0.5);
   const [isMuted, setIsMuted] = useState(false);
+  const [lives, setLives] = useState(5);
+  const [gameOverReason, setGameOverReason] = useState("");
 
   const bgmRef = useRef<HTMLAudioElement | null>(null);
 
@@ -57,15 +59,19 @@ export default function BasketShootPage() {
     localStorage.setItem("gameVolume", volume.toString());
   }, [volume, isMuted]);
 
-  useEffect(() => {
-    const saved = localStorage.getItem("basketShootLeaderboard");
-    if (saved) {
-      try {
-        setLeaderboard(JSON.parse(saved));
-      } catch (e) {
-        console.error("Failed to load leaderboard");
+  const fetchLeaderboard = async () => {
+    try {
+      const response = await getTopScoresByGame('basket_shoot');
+      if (response.success && response.data) {
+        setLeaderboard(response.data);
       }
+    } catch (e) {
+      console.error("Failed to load leaderboard", e);
     }
+  };
+
+  useEffect(() => {
+    fetchLeaderboard();
   }, []);
 
   const startGame = () => {
@@ -75,29 +81,22 @@ export default function BasketShootPage() {
     setScore(0);
     scoreRef.current = 0;
     setTimeLeft(180);
+    setLives(5);
   };
 
-  const handleGameOver = async () => {
+  const handleMiss = () => {
+    setLives(prev => {
+      const newLives = prev - 1;
+      return newLives;
+    });
+  };
+
+  const handleGameOver = async (reason?: string) => {
     setIsPlaying(false);
     setIsGameOver(true);
+    if (reason) setGameOverReason(reason);
     
-    const isTop5 = leaderboard.length < 5 || score > (leaderboard[leaderboard.length - 1]?.score || 0);
-    if (isTop5 && score > 0 && playerName.trim()) {
-      const newEntry: LeaderboardEntry = {
-        name: playerName.substring(0, 20).toUpperCase(),
-        score: score,
-        date: new Date().toLocaleDateString()
-      };
-      
-      const newLeaderboard = [...leaderboard, newEntry]
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 5);
-        
-      setLeaderboard(newLeaderboard);
-      localStorage.setItem("basketShootLeaderboard", JSON.stringify(newLeaderboard));
-    }
-
-    if (score > 0 && playerName.trim()) {
+    if (score >= 0 && playerName.trim()) {
       try {
         const response = await saveGameScore(
           playerName.substring(0, 20).toUpperCase(),
@@ -110,6 +109,7 @@ export default function BasketShootPage() {
           alert("Gagal menyimpan skor ke database: " + response.error);
         } else {
           console.log("Skor berhasil disimpan ke Supabase via Server Action!");
+          await fetchLeaderboard();
         }
       } catch (err) {
         console.error("Failed to call saveGameScore action", err);
@@ -122,7 +122,7 @@ export default function BasketShootPage() {
       const timer = setInterval(() => {
         setTimeLeft(prev => {
           if (prev <= 1) {
-            handleGameOver();
+            handleGameOver("Waktu Habis");
             return 0;
           }
           return prev - 1;
@@ -132,6 +132,12 @@ export default function BasketShootPage() {
     }
   }, [isPlaying]);
 
+  useEffect(() => {
+    if (lives <= 0 && isPlaying) {
+      handleGameOver("Kehabisan Nyawa");
+    }
+  }, [lives, isPlaying]);
+
   return (
     <main className="flex min-h-screen flex-col bg-[#0a0d0c] text-white overflow-hidden relative font-sans">
       
@@ -140,15 +146,20 @@ export default function BasketShootPage() {
         <div className="absolute top-0 left-0 w-full p-4 z-30 flex flex-col gap-2 pointer-events-none">
           <div className="flex justify-between items-center w-full max-w-7xl mx-auto">
             
-            <div className="flex gap-2 items-center">
-              <div className="bg-[#1c1e1c]/90 backdrop-blur-md px-4 py-3 rounded-full border border-white/5 flex items-center gap-3 shadow-lg">
+            <div className="flex gap-2 items-center flex-wrap">
+              <div className="bg-[#1c1e1c]/90 backdrop-blur-md px-4 py-3 rounded-full border border-white/5 flex items-center gap-3 shadow-[0_4px_0_0_#2a2d2a]">
                 <div className="w-2 h-2 rounded-full bg-[#f97316] animate-pulse"></div>
-                <span className="text-xs text-gray-400">Score</span>
+                <span className="text-xs text-[#a0a0a0]">Score</span>
                 <span className="text-lg font-bold text-white">{score}</span>
               </div>
-              <div className="bg-[#1c1e1c]/90 backdrop-blur-md px-4 py-3 rounded-full border border-white/5 flex items-center gap-3 shadow-lg">
-                <span className="text-xs text-gray-400">Time</span>
+              <div className="bg-[#1c1e1c]/90 backdrop-blur-md px-4 py-3 rounded-full border border-white/5 flex items-center gap-3 shadow-[0_4px_0_0_#2a2d2a]">
+                <span className="text-xs text-[#a0a0a0]">Time</span>
                 <span className="text-lg font-bold text-white">{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</span>
+              </div>
+              <div className="bg-[#1c1e1c]/90 backdrop-blur-md px-4 py-3 rounded-full border border-white/5 flex items-center gap-1.5 shadow-[0_4px_0_0_#2a2d2a]">
+                 {[...Array(5)].map((_, i) => (
+                    <span key={i} className={`text-lg transition-colors ${i < lives ? "text-red-500" : "text-gray-600 opacity-40 grayscale"}`}>❤</span>
+                 ))}
               </div>
             </div>
 
@@ -205,7 +216,7 @@ export default function BasketShootPage() {
                 <div className="bg-[#1c1e1c] rounded-3xl p-8 border border-[#f97316]/30 relative overflow-hidden shadow-2xl">
                   <div className="absolute top-0 right-0 w-48 h-48 bg-[#f97316]/20 rounded-full blur-3xl -mr-20 -mt-20"></div>
                   <div className="flex justify-between items-center mb-6">
-                    <span className="text-[#f97316] font-bold text-2xl tracking-tight">Waktu Habis</span>
+                    <span className="text-[#f97316] font-bold text-2xl tracking-tight">{gameOverReason || "Permainan Selesai"}</span>
                     <span className="text-[#a0a0a0] font-medium bg-black/40 px-4 py-2 rounded-full">Skor: {score}</span>
                   </div>
                   <div className="bg-[#0a0d0c] rounded-2xl p-6 border border-white/5 flex gap-6 items-center">
@@ -332,6 +343,7 @@ export default function BasketShootPage() {
                 setScore(score);
                 scoreRef.current = score;
               }}
+              onMiss={handleMiss}
             />
           </div>
           <BasketPoseController onPoseState={setPoseState} />
