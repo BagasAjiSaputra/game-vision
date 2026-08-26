@@ -24,6 +24,7 @@ export default function EndlessRunner() {
   const [gameOverReason, setGameOverReason] = useState("");
   const [volume, setVolume] = useState(0.5);
   const [isMuted, setIsMuted] = useState(false);
+  const [randomSeed, setRandomSeed] = useState("");
 
   const [poseState, setPoseState] = useState<PoseState>({
     lane: 0,
@@ -35,6 +36,7 @@ export default function EndlessRunner() {
   const bgmRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
+    setRandomSeed(Math.random().toString(36).substring(7));
     const savedVol = localStorage.getItem("gameVolume");
     if (savedVol) {
       setVolume(parseFloat(savedVol));
@@ -157,8 +159,8 @@ export default function EndlessRunner() {
           {/* Header Bar */}
           <div className="flex justify-between items-center mb-12">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 border-2 border-[#1c1e1c] flex items-center justify-center overflow-hidden">
-                <Activity className="w-7 h-7 text-[#d4ff00]" />
+              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 border-2 border-[#1c1e1c] flex items-center justify-center overflow-hidden shrink-0">
+                {randomSeed && <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${randomSeed}`} alt="Profile" className="w-full h-full object-cover" />}
               </div>
               <div>
                 <p className="text-[#a0a0a0] text-sm">Selamat datang di,</p>
@@ -256,9 +258,10 @@ export default function EndlessRunner() {
                       className={`rounded-3xl p-6 md:p-8 flex items-center justify-between transition-all hover:-translate-y-1 border-2 ${idx === 0 ? 'bg-[#d4ff00] text-black border-[#9bb800] shadow-[0_6px_0_0_#9bb800] hover:shadow-[0_8px_0_0_#9bb800]' : 'bg-[#1c1e1c] text-white border-[#2a2d2a] shadow-[0_6px_0_0_#2a2d2a] hover:shadow-[0_8px_0_0_#9bb800] hover:border-[#d4ff00]'}`}
                     >
                       <div className="flex items-center gap-6">
-                        <div className={`w-14 h-14 rounded-full flex items-center justify-center font-bold text-xl ${idx === 0 ? 'bg-black/10' : 'bg-white/5'}`}>
+                        <div className={`w-14 h-14 rounded-full flex items-center justify-center font-bold text-xl shrink-0 ${idx === 0 ? 'bg-black/10' : 'bg-white/5'}`}>
                           #{idx + 1}
                         </div>
+                        <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${entry.name}`} alt="Avatar" className="w-14 h-14 rounded-full bg-black/40 shrink-0" />
                         <div>
                           <p className="font-bold text-xl md:text-2xl">{entry.name}</p>
                           <p className={`font-medium mt-1 ${idx === 0 ? 'text-black/60' : 'text-[#a0a0a0]'}`}>{entry.date}</p>

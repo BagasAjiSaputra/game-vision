@@ -20,9 +20,13 @@ export default function Home() {
   const [basketLeaderboard, setBasketLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [overallLeaderboard, setOverallLeaderboard] = useState<{name: string, average: number}[]>([]);
   
+  const [randomSeed, setRandomSeed] = useState("");
+  
   const router = useRouter();
 
   useEffect(() => {
+    setRandomSeed(Math.random().toString(36).substring(7));
+
     // Load leaderboards from Supabase
     const fetchLeaderboards = async () => {
       try {
@@ -73,7 +77,7 @@ export default function Home() {
       <div className="flex justify-between items-center mb-10">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 border-2 border-[#1c1e1c] flex items-center justify-center overflow-hidden shrink-0">
-             {/* <Activity className="w-6 h-6 text-[#d4ff00]" /> */}
+             {randomSeed && <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${randomSeed}`} alt="Profile" className="w-full h-full object-cover" />}
           </div>
           <div>
             <p className="text-[#a0a0a0] text-xs">Selamat Pagi!</p>
@@ -183,10 +187,11 @@ export default function Home() {
                     {overallLeaderboard.map((entry, idx) => (
                       <div key={idx} className={`rounded-2xl p-4 flex items-center justify-between ${idx === 0 ? 'bg-[#d4ff00] text-black' : 'bg-black/30 border border-white/5 text-white'}`}>
                          <div className="flex items-center gap-3">
-                           <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${idx === 0 ? 'bg-black/10' : 'bg-white/5'}`}>
+                           <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shrink-0 ${idx === 0 ? 'bg-black/10' : 'bg-white/5'}`}>
                              #{idx + 1}
                            </div>
-                           <span className="font-bold">{entry.name}</span>
+                           <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${entry.name}`} alt="Avatar" className="w-8 h-8 rounded-full bg-black/40 shrink-0" />
+                           <span className="font-bold truncate">{entry.name}</span>
                          </div>
                          <span className="font-black text-lg">{entry.average}</span>
                       </div>
@@ -207,8 +212,9 @@ export default function Home() {
                      {endlessLeaderboard.length > 0 ? endlessLeaderboard.map((entry, idx) => (
                        <div key={idx} className="flex justify-between items-center bg-black/30 border border-white/5 p-3 rounded-xl">
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-[#a0a0a0]">#{idx+1}</span>
-                            <span className="font-medium text-sm">{entry.name}</span>
+                            <span className="text-xs text-[#a0a0a0] w-4 shrink-0">#{idx+1}</span>
+                            <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${entry.name}`} alt="Avatar" className="w-6 h-6 rounded-full bg-black/40 shrink-0" />
+                            <span className="font-medium text-sm truncate">{entry.name}</span>
                           </div>
                           <span className="font-bold text-sm">{entry.score}</span>
                        </div>
@@ -225,8 +231,9 @@ export default function Home() {
                      {birdLeaderboard.length > 0 ? birdLeaderboard.map((entry, idx) => (
                        <div key={idx} className="flex justify-between items-center bg-black/30 border border-white/5 p-3 rounded-xl">
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-[#a0a0a0]">#{idx+1}</span>
-                            <span className="font-medium text-sm">{entry.name}</span>
+                            <span className="text-xs text-[#a0a0a0] w-4 shrink-0">#{idx+1}</span>
+                            <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${entry.name}`} alt="Avatar" className="w-6 h-6 rounded-full bg-black/40 shrink-0" />
+                            <span className="font-medium text-sm truncate">{entry.name}</span>
                           </div>
                           <span className="font-bold text-sm">{entry.score}</span>
                        </div>
@@ -243,8 +250,9 @@ export default function Home() {
                      {basketLeaderboard.length > 0 ? basketLeaderboard.map((entry, idx) => (
                        <div key={idx} className="flex justify-between items-center bg-black/30 border border-white/5 p-3 rounded-xl">
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-[#a0a0a0]">#{idx+1}</span>
-                            <span className="font-medium text-sm">{entry.name}</span>
+                            <span className="text-xs text-[#a0a0a0] w-4 shrink-0">#{idx+1}</span>
+                            <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${entry.name}`} alt="Avatar" className="w-6 h-6 rounded-full bg-black/40 shrink-0" />
+                            <span className="font-medium text-sm truncate">{entry.name}</span>
                           </div>
                           <span className="font-bold text-sm">{entry.score}</span>
                        </div>

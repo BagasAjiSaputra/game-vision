@@ -27,10 +27,12 @@ export default function BasketShootPage() {
   const [isMuted, setIsMuted] = useState(false);
   const [lives, setLives] = useState(5);
   const [gameOverReason, setGameOverReason] = useState("");
+  const [randomSeed, setRandomSeed] = useState("");
 
   const bgmRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
+    setRandomSeed(Math.random().toString(36).substring(7));
     const savedVol = localStorage.getItem("gameVolume");
     if (savedVol) {
       setVolume(parseFloat(savedVol));
@@ -187,8 +189,8 @@ export default function BasketShootPage() {
           {/* Header Bar */}
           <div className="flex justify-between items-center mb-12">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 border-2 border-[#1c1e1c] flex items-center justify-center overflow-hidden">
-                <Activity className="w-7 h-7 text-[#f97316]" />
+              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 border-2 border-[#1c1e1c] flex items-center justify-center overflow-hidden shrink-0">
+                {randomSeed && <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${randomSeed}`} alt="Profile" className="w-full h-full object-cover" />}
               </div>
               <div>
                 <p className="text-[#a0a0a0] text-sm">Selamat datang di,</p>
@@ -249,22 +251,12 @@ export default function BasketShootPage() {
               {/* Controls */}
               <div className="mt-2">
                 <h3 className="text-2xl font-bold mb-6">Kontrol MediaPipe</h3>
-                <div className="grid grid-cols-2 gap-5">
-                  <div className="bg-[#1c1e1c] rounded-3xl p-6 border-2 border-[#2a2d2a] shadow-[0_6px_0_0_#2a2d2a] hover:-translate-y-1 hover:shadow-[0_8px_0_0_#f97316] hover:border-[#f97316] transition-all">
-                    <div className="w-12 h-12 rounded-full bg-[#2a2c2a] flex items-center justify-center text-white mb-4"><ArrowDown className="w-6 h-6" /></div>
-                    <p className="font-bold text-xl">Jongkok</p>
-                    <p className="text-[#a0a0a0] text-sm mt-2">Jongkok untuk ambil ancang-ancang</p>
-                  </div>
-                  <div className="bg-[#1c1e1c] rounded-3xl p-6 border-2 border-[#2a2d2a] shadow-[0_6px_0_0_#2a2d2a] hover:-translate-y-1 hover:shadow-[0_8px_0_0_#f97316] hover:border-[#f97316] transition-all">
-                    <div className="w-12 h-12 rounded-full bg-[#2a2c2a] flex items-center justify-center text-white mb-4"><ArrowUp className="w-6 h-6" /></div>
-                    <p className="font-bold text-xl">Lompat</p>
-                    <p className="text-[#a0a0a0] text-sm mt-2">Lompat untuk menembak bola</p>
-                  </div>
-                  <div className="bg-[#1c1e1c] rounded-3xl p-6 border-2 border-[#2a2d2a] shadow-[0_6px_0_0_#2a2d2a] hover:-translate-y-1 hover:shadow-[0_8px_0_0_#f97316] hover:border-[#f97316] transition-all col-span-2 flex items-center gap-6">
+                <div className="grid grid-cols-1 gap-5">
+                  <div className="bg-[#1c1e1c] rounded-3xl p-6 border-2 border-[#2a2d2a] shadow-[0_6px_0_0_#2a2d2a] hover:-translate-y-1 hover:shadow-[0_8px_0_0_#f97316] hover:border-[#f97316] transition-all flex items-center gap-6">
                     <div className="w-14 h-14 rounded-full bg-[#2a2c2a] flex items-center justify-center text-white shrink-0"><Hand className="w-7 h-7" /></div>
                     <div>
-                      <p className="font-bold text-xl">Tangan di Atas</p>
-                      <p className="text-[#a0a0a0] text-sm mt-2">Pastikan tangan diangkat saat melompat untuk *shoot*</p>
+                      <p className="font-bold text-xl">Ayunkan Tangan ke Atas</p>
+                      <p className="text-[#a0a0a0] text-sm mt-2">Gerakkan kedua tangan Anda ke atas dengan cepat secara bersamaan untuk melakukan tembakan bola (*shoot*).</p>
                     </div>
                   </div>
                 </div>
@@ -286,9 +278,10 @@ export default function BasketShootPage() {
                       className={`rounded-3xl p-6 md:p-8 flex items-center justify-between transition-all hover:-translate-y-1 border-2 ${idx === 0 ? 'bg-[#f97316] text-black border-[#ea580c] shadow-[0_6px_0_0_#ea580c] hover:shadow-[0_8px_0_0_#ea580c]' : 'bg-[#1c1e1c] text-white border-[#2a2d2a] shadow-[0_6px_0_0_#2a2d2a] hover:shadow-[0_8px_0_0_#f97316] hover:border-[#f97316]'}`}
                     >
                       <div className="flex items-center gap-6">
-                        <div className={`w-14 h-14 rounded-full flex items-center justify-center font-bold text-xl ${idx === 0 ? 'bg-black/10' : 'bg-white/5'}`}>
+                        <div className={`w-14 h-14 rounded-full flex items-center justify-center font-bold text-xl shrink-0 ${idx === 0 ? 'bg-black/10' : 'bg-white/5'}`}>
                           #{idx + 1}
                         </div>
+                        <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${entry.name}`} alt="Avatar" className="w-14 h-14 rounded-full bg-black/40 shrink-0" />
                         <div>
                           <p className="font-bold text-xl md:text-2xl">{entry.name}</p>
                           <p className={`font-medium mt-1 ${idx === 0 ? 'text-black/60' : 'text-[#a0a0a0]'}`}>{entry.date}</p>

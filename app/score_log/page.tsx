@@ -127,8 +127,8 @@ export default function ScoreLogPage() {
                   <div key={log.id} className="grid grid-cols-1 md:grid-cols-12 gap-4 p-5 bg-[#0a0d0c] md:bg-transparent rounded-2xl md:rounded-none md:border-b border-white/5 hover:bg-white/5 transition-colors items-center">
                     
                     <div className="md:col-span-4 flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white font-bold shrink-0">
-                        {log.player_name.charAt(0)}
+                      <div className="w-10 h-10 rounded-full bg-black/40 flex items-center justify-center font-bold shrink-0 overflow-hidden">
+                        <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${log.player_name}`} alt="Avatar" className="w-full h-full object-cover" />
                       </div>
                       <span className="font-bold text-lg">{log.player_name}</span>
                     </div>

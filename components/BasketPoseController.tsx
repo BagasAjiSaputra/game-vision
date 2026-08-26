@@ -62,6 +62,8 @@ export default function BasketPoseController({ onPoseState }: BasketPoseControll
         minTrackingConfidence: 0.5,
       });
 
+      let wristHistory: {ly: number, ry: number, time: number}[] = [];
+
       pose.onResults((results: any) => {
         if (!isActive) return;
         
@@ -129,19 +131,38 @@ export default function BasketPoseController({ onPoseState }: BasketPoseControll
           let aimX = (invertedX - 0.2) / 0.6; 
           aimX = Math.max(0, Math.min(1, aimX)); // clamp 0 to 1
 
-          // 2. Jumping detection
-          const avgHipY = (leftHip.y + rightHip.y) / 2;
-          
-          baselineHipY.current.push(avgHipY);
-          if (baselineHipY.current.length > 30) {
-            baselineHipY.current.shift();
-          }
-          
-          const baseline = baselineHipY.current.reduce((a, b) => a + b, 0) / baselineHipY.current.length;
-          const isJumping = avgHipY < baseline - 0.04;
+          // 2. Shooting detection (Fast upward movement of both hands)
+          const now = performance.now();
+          wristHistory.push({ ly: leftWrist.y, ry: rightWrist.y, time: now });
+          // Keep only last 300ms of history
+          wristHistory = wristHistory.filter(h => now - h.time < 300);
 
-          // 3. Shooting detection
-          const isShooting = leftWrist.y < leftShoulder.y - 0.05 && rightWrist.y < rightShoulder.y - 0.05;
+          let isShooting = false;
+          if (wristHistory.length > 3) {
+            const oldest = wristHistory[0];
+            const newest = wristHistory[wristHistory.length - 1];
+            const dyLeft = newest.ly - oldest.ly;
+            const dyRight = newest.ry - oldest.ry;
+            
+            // Syarat 1: Tangan harus mulai dari posisi "siap/tengah" (di sekitar dada/pundak)
+            const isStartLeftMiddle = oldest.ly > leftShoulder.y - 0.1 && oldest.ly < leftShoulder.y + 0.3;
+            const isStartRightMiddle = oldest.ry > rightShoulder.y - 0.1 && oldest.ry < rightShoulder.y + 0.3;
+            
+            // Syarat 2: Tangan harus berakhir di atas pundak (terentang ke atas)
+            const isEndLeftHigh = newest.ly < leftShoulder.y - 0.1;
+            const isEndRightHigh = newest.ry < rightShoulder.y - 0.1;
+            
+            // Syarat 3: Gerakan ke atas harus cepat
+            const isFastUpward = dyLeft < -0.15 && dyRight < -0.15;
+            
+            if (isStartLeftMiddle && isStartRightMiddle && isEndLeftHigh && isEndRightHigh && isFastUpward) {
+              isShooting = true;
+            }
+          }
+
+          // We no longer require jumping, so we just set isJumping = isShooting 
+          // to satisfy the BasketGame component's trigger condition.
+          const isJumping = isShooting;
 
           const stateStr = `${aimX.toFixed(2)},${isJumping},${isShooting}`;
           if (stateStr !== lastEmittedStateRef.current) {
