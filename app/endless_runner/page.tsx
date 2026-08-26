@@ -5,6 +5,7 @@ import Link from "next/link";
 import Game from "@/components/Game";
 import PoseController, { PoseState } from "@/components/PoseController";
 import { Activity, Volume2, VolumeX, AlertTriangle, ArrowUp, ArrowDown, ArrowLeftRight, ArrowLeft } from "lucide-react";
+import { saveGameScore } from "@/app/actions";
 
 interface LeaderboardEntry {
   name: string;
@@ -83,7 +84,7 @@ export default function EndlessRunner() {
     setGameOverReason("");
   };
 
-  const handleGameOver = (reason?: string) => {
+  const handleGameOver = async (reason?: string) => {
     setIsPlaying(false);
     setIsGameOver(true);
     if (reason) setGameOverReason(reason);
@@ -102,6 +103,25 @@ export default function EndlessRunner() {
         
       setLeaderboard(newLeaderboard);
       localStorage.setItem("endlessRunnerLeaderboard", JSON.stringify(newLeaderboard));
+    }
+
+    if (score > 0 && playerName.trim()) {
+      try {
+        const response = await saveGameScore(
+          playerName.substring(0, 20).toUpperCase(),
+          'endless_runner',
+          score
+        );
+        
+        if (!response.success) {
+          console.error("Supabase Insert Error:", response.error);
+          alert("Gagal menyimpan skor ke database: " + response.error);
+        } else {
+          console.log("Skor berhasil disimpan ke Supabase via Server Action!");
+        }
+      } catch (err) {
+        console.error("Failed to call saveGameScore action", err);
+      }
     }
   };
 

@@ -5,6 +5,7 @@ import BasketPoseController, { BasketPoseState } from "@/components/BasketPoseCo
 import BasketGame from "@/components/BasketGame";
 import Link from "next/link";
 import { Activity, Volume2, VolumeX, Clock, ArrowDown, ArrowUp, Hand, ArrowLeft } from "lucide-react";
+import { saveGameScore } from "@/app/actions";
 
 export interface LeaderboardEntry {
   name: string;
@@ -76,17 +77,15 @@ export default function BasketShootPage() {
     setTimeLeft(180);
   };
 
-  const handleGameOver = () => {
+  const handleGameOver = async () => {
     setIsPlaying(false);
     setIsGameOver(true);
     
-    const finalScore = scoreRef.current;
-    
-    const isTop5 = leaderboard.length < 5 || finalScore > (leaderboard[leaderboard.length - 1]?.score || 0);
-    if (isTop5 && finalScore > 0 && playerName.trim()) {
+    const isTop5 = leaderboard.length < 5 || score > (leaderboard[leaderboard.length - 1]?.score || 0);
+    if (isTop5 && score > 0 && playerName.trim()) {
       const newEntry: LeaderboardEntry = {
         name: playerName.substring(0, 20).toUpperCase(),
-        score: finalScore,
+        score: score,
         date: new Date().toLocaleDateString()
       };
       
@@ -96,6 +95,25 @@ export default function BasketShootPage() {
         
       setLeaderboard(newLeaderboard);
       localStorage.setItem("basketShootLeaderboard", JSON.stringify(newLeaderboard));
+    }
+
+    if (score > 0 && playerName.trim()) {
+      try {
+        const response = await saveGameScore(
+          playerName.substring(0, 20).toUpperCase(),
+          'basket_shoot',
+          score
+        );
+        
+        if (!response.success) {
+          console.error("Supabase Insert Error:", response.error);
+          alert("Gagal menyimpan skor ke database: " + response.error);
+        } else {
+          console.log("Skor berhasil disimpan ke Supabase via Server Action!");
+        }
+      } catch (err) {
+        console.error("Failed to call saveGameScore action", err);
+      }
     }
   };
 

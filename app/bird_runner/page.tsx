@@ -5,6 +5,7 @@ import BirdGame from "@/components/BirdGame";
 import BirdPoseController, { BirdPoseState } from "@/components/BirdPoseController";
 import Link from "next/link";
 import { Activity, Volume2, VolumeX, AlertTriangle, Hand, ArrowLeft } from "lucide-react";
+import { saveGameScore } from "@/app/actions";
 
 export interface LeaderboardEntry {
   name: string;
@@ -76,12 +77,11 @@ export default function BirdRunner() {
     setHasStartedPlaying(false);
   };
 
-  const handleGameOver = (reason: string = "tabrakan") => {
+  const handleGameOver = async (reason?: string) => {
     setIsPlaying(false);
     setIsGameOver(true);
-    setGameOverReason(reason);
+    if (reason) setGameOverReason(reason);
     
-    // Auto-save if it's a new high score
     const isTop5 = leaderboard.length < 5 || score > (leaderboard[leaderboard.length - 1]?.score || 0);
     if (isTop5 && score > 0 && playerName.trim()) {
       const newEntry: LeaderboardEntry = {
@@ -96,6 +96,25 @@ export default function BirdRunner() {
         
       setLeaderboard(newLeaderboard);
       localStorage.setItem("birdRunnerLeaderboard", JSON.stringify(newLeaderboard));
+    }
+
+    if (score > 0 && playerName.trim()) {
+      try {
+        const response = await saveGameScore(
+          playerName.substring(0, 20).toUpperCase(),
+          'bird_runner',
+          score
+        );
+        
+        if (!response.success) {
+          console.error("Supabase Insert Error:", response.error);
+          alert("Gagal menyimpan skor ke database: " + response.error);
+        } else {
+          console.log("Skor berhasil disimpan ke Supabase via Server Action!");
+        }
+      } catch (err) {
+        console.error("Failed to call saveGameScore action", err);
+      }
     }
   };
 

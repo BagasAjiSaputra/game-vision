@@ -91,7 +91,7 @@ export default function Home() {
       <div className="flex justify-between items-center mb-10">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 border-2 border-[#1c1e1c] flex items-center justify-center overflow-hidden shrink-0">
-             <Activity className="w-6 h-6 text-[#d4ff00]" />
+             {/* <Activity className="w-6 h-6 text-[#d4ff00]" /> */}
           </div>
           <div>
             <p className="text-[#a0a0a0] text-xs">Selamat Pagi!</p>
@@ -186,12 +186,12 @@ export default function Home() {
           <div className="mt-12">
             <div className="flex justify-between items-end mb-4">
               <h3 className="text-lg font-bold">Rekor Tertinggi</h3>
-              <span className="text-[#a0a0a0] text-xs cursor-pointer hover:text-white" onClick={() => setIsLeaderboardOpen(true)}>Lihat Papan Peringkat</span>
+              <Link href="/score_log" className="text-[#a0a0a0] text-xs cursor-pointer hover:text-white">Lihat Papan Peringkat</Link>
             </div>
             
-            <div 
-               onClick={() => setIsLeaderboardOpen(true)}
-               className="rounded-3xl bg-[#1c1e1c] text-white border-2 border-[#2a2d2a] p-5 flex items-center justify-between cursor-pointer hover:-translate-y-1 hover:border-[#d4ff00] hover:shadow-[0_8px_0_0_#9bb800] hover:bg-[#d4ff00] hover:text-black group transition-all shadow-[0_6px_0_0_#2a2d2a] active:translate-y-[6px] active:shadow-none"
+            <Link 
+               href="/score_log"
+               className="block rounded-3xl bg-[#1c1e1c] text-white border-2 border-[#2a2d2a] p-5 flex items-center justify-between cursor-pointer hover:-translate-y-1 hover:border-[#d4ff00] hover:shadow-[0_8px_0_0_#9bb800] hover:bg-[#d4ff00] hover:text-black group transition-all shadow-[0_6px_0_0_#2a2d2a] active:translate-y-[6px] active:shadow-none"
             >
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-full bg-yellow-500/10 group-hover:bg-black/10 flex items-center justify-center text-yellow-500 group-hover:text-black transition-colors"><Trophy className="w-6 h-6" /></div>
@@ -201,7 +201,7 @@ export default function Home() {
                 </div>
               </div>
               <div className="text-[#a0a0a0] group-hover:text-black transition-colors"><ArrowRight className="w-5 h-5" /></div>
-            </div>
+            </Link>
           </div>
 
         </div>
