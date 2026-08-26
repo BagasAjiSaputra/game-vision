@@ -138,7 +138,7 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             
             {/* Endless Runner */}
-            <Link href="/endless_runner" className="group rounded-3xl bg-[#1c1e1c] text-white p-6 border border-white/5 flex flex-col justify-between relative overflow-hidden transition-all hover:bg-[#d4ff00] hover:text-black hover:border-[#d4ff00] hover:scale-[1.02] min-h-[220px]">
+            <Link href="/endless_runner" className="group rounded-3xl bg-[#1c1e1c] text-white p-6 border-2 border-[#2a2d2a] flex flex-col justify-between relative overflow-hidden transition-all hover:-translate-y-1 hover:bg-[#d4ff00] hover:text-black hover:border-[#d4ff00] shadow-[0_8px_0_0_#2a2d2a] hover:shadow-[0_10px_0_0_#9bb800] active:translate-y-[8px] active:shadow-none min-h-[220px]">
               <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 group-hover:bg-white/20 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none transition-colors"></div>
               <div>
                  <div className="flex justify-between items-start mb-2">
@@ -154,7 +154,7 @@ export default function Home() {
             </Link>
 
             {/* Bird Runner */}
-            <Link href="/bird_runner" className="group rounded-3xl bg-[#1c1e1c] text-white p-6 border border-white/5 flex flex-col justify-between relative overflow-hidden transition-all hover:bg-[#d4ff00] hover:text-black hover:border-[#d4ff00] hover:scale-[1.02] min-h-[220px]">
+            <Link href="/bird_runner" className="group rounded-3xl bg-[#1c1e1c] text-white p-6 border-2 border-[#2a2d2a] flex flex-col justify-between relative overflow-hidden transition-all hover:-translate-y-1 hover:bg-[#d4ff00] hover:text-black hover:border-[#d4ff00] shadow-[0_8px_0_0_#2a2d2a] hover:shadow-[0_10px_0_0_#9bb800] active:translate-y-[8px] active:shadow-none min-h-[220px]">
               <div>
                  <div className="flex justify-between items-start mb-2">
                    <h3 className="text-2xl font-black uppercase tracking-tight">Bird<br/>Runner</h3>
@@ -168,7 +168,7 @@ export default function Home() {
             </Link>
 
             {/* Basket Shoot */}
-            <Link href="/basket_shoot" className="group rounded-3xl bg-[#1c1e1c] text-white p-6 border border-white/5 flex flex-col justify-between relative overflow-hidden transition-all hover:bg-[#d4ff00] hover:text-black hover:border-[#d4ff00] hover:scale-[1.02] min-h-[220px]">
+            <Link href="/basket_shoot" className="group rounded-3xl bg-[#1c1e1c] text-white p-6 border-2 border-[#2a2d2a] flex flex-col justify-between relative overflow-hidden transition-all hover:-translate-y-1 hover:bg-[#d4ff00] hover:text-black hover:border-[#d4ff00] shadow-[0_8px_0_0_#2a2d2a] hover:shadow-[0_10px_0_0_#9bb800] active:translate-y-[8px] active:shadow-none min-h-[220px]">
               <div>
                  <div className="flex justify-between items-start mb-2">
                    <h3 className="text-2xl font-black uppercase tracking-tight">Basket<br/>Shoot</h3>
@@ -191,16 +191,16 @@ export default function Home() {
             
             <div 
                onClick={() => setIsLeaderboardOpen(true)}
-               className="rounded-3xl bg-[#1c1e1c] border border-white/5 p-5 flex items-center justify-between cursor-pointer hover:border-[#d4ff00]/50 transition-colors"
+               className="rounded-3xl bg-[#1c1e1c] text-white border-2 border-[#2a2d2a] p-5 flex items-center justify-between cursor-pointer hover:-translate-y-1 hover:border-[#d4ff00] hover:shadow-[0_8px_0_0_#9bb800] hover:bg-[#d4ff00] hover:text-black group transition-all shadow-[0_6px_0_0_#2a2d2a] active:translate-y-[6px] active:shadow-none"
             >
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-500"><Trophy className="w-6 h-6" /></div>
+                <div className="w-12 h-12 rounded-full bg-yellow-500/10 group-hover:bg-black/10 flex items-center justify-center text-yellow-500 group-hover:text-black transition-colors"><Trophy className="w-6 h-6" /></div>
                 <div>
                   <p className="font-bold">Papan Peringkat Global</p>
-                  <p className="text-[#a0a0a0] text-xs mt-1">Lihat rekor terbaik di semua mode</p>
+                  <p className="text-[#a0a0a0] group-hover:text-black/70 text-xs mt-1 transition-colors">Lihat rekor terbaik di semua mode</p>
                 </div>
               </div>
-              <div className="text-[#a0a0a0]"><ArrowRight className="w-5 h-5" /></div>
+              <div className="text-[#a0a0a0] group-hover:text-black transition-colors"><ArrowRight className="w-5 h-5" /></div>
             </div>
           </div>
 

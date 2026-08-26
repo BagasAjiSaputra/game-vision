@@ -208,7 +208,7 @@ export default function BirdRunner() {
               <div className="mt-2">
                 <h3 className="text-2xl font-bold mb-6">Kontrol MediaPipe</h3>
                 <div className="grid grid-cols-1 gap-5">
-                  <div className="bg-[#1c1e1c] rounded-3xl p-6 border border-white/5 hover:border-white/20 transition-colors flex items-center gap-6">
+                  <div className="bg-[#1c1e1c] rounded-3xl p-6 border-2 border-[#2a2d2a] shadow-[0_6px_0_0_#2a2d2a] hover:-translate-y-1 hover:shadow-[0_8px_0_0_#3b82f6] hover:border-[#3b82f6] transition-all flex items-center gap-6">
                     <div className="w-14 h-14 rounded-full bg-[#2a2c2a] flex items-center justify-center text-white shrink-0"><Hand className="w-7 h-7" /></div>
                     <div>
                       <p className="font-bold text-xl">Kepakkan Sayap</p>
@@ -231,7 +231,7 @@ export default function BirdRunner() {
                   leaderboard.map((entry, idx) => (
                     <div 
                       key={idx} 
-                      className={`rounded-3xl p-6 md:p-8 flex items-center justify-between transition-transform hover:scale-[1.02] ${idx === 0 ? 'bg-[#3b82f6] text-white shadow-[0_8px_30px_rgba(59,130,246,0.2)]' : 'bg-[#1c1e1c] text-white border border-white/5 hover:border-[#3b82f6]/50'}`}
+                      className={`rounded-3xl p-6 md:p-8 flex items-center justify-between transition-all hover:-translate-y-1 border-2 ${idx === 0 ? 'bg-[#3b82f6] text-white border-[#2563eb] shadow-[0_6px_0_0_#2563eb] hover:shadow-[0_8px_0_0_#2563eb]' : 'bg-[#1c1e1c] text-white border-[#2a2d2a] shadow-[0_6px_0_0_#2a2d2a] hover:shadow-[0_8px_0_0_#3b82f6] hover:border-[#3b82f6]'}`}
                     >
                       <div className="flex items-center gap-6">
                         <div className={`w-14 h-14 rounded-full flex items-center justify-center font-bold text-xl ${idx === 0 ? 'bg-white/20' : 'bg-white/5'}`}>
@@ -270,7 +270,7 @@ export default function BirdRunner() {
                <button
                   onClick={startGame}
                   disabled={!playerName.trim()}
-                  className={`flex-1 h-20 rounded-full flex items-center justify-center gap-4 text-2xl font-black tracking-widest transition-all shadow-2xl ${!playerName.trim() ? 'bg-[#1c1e1c] text-[#555] cursor-not-allowed border border-white/5' : 'bg-[#3b82f6] text-white hover:bg-[#2563eb] active:scale-95 hover:shadow-[0_0_40px_rgba(59,130,246,0.3)]'}`}
+                  className={`flex-1 h-20 rounded-full flex items-center justify-center gap-4 text-2xl font-black tracking-widest transition-all ${!playerName.trim() ? 'bg-[#1c1e1c] text-[#555] cursor-not-allowed border-2 border-[#2a2d2a] shadow-[0_6px_0_0_#2a2d2a]' : 'bg-[#3b82f6] text-white hover:bg-[#2563eb] border-2 border-[#2563eb] shadow-[0_8px_0_0_#2563eb] hover:-translate-y-1 hover:shadow-[0_10px_0_0_#2563eb] active:translate-y-[8px] active:shadow-none'}`}
                 >
                   <span className="w-3 h-3 rounded-full bg-white"></span>
                   {isGameOver ? "MAIN LAGI" : "MULAI BERMAIN"}

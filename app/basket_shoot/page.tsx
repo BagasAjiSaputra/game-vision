@@ -221,17 +221,17 @@ export default function BasketShootPage() {
               <div className="mt-2">
                 <h3 className="text-2xl font-bold mb-6">Kontrol MediaPipe</h3>
                 <div className="grid grid-cols-2 gap-5">
-                  <div className="bg-[#1c1e1c] rounded-3xl p-6 border border-white/5 hover:border-white/20 transition-colors">
+                  <div className="bg-[#1c1e1c] rounded-3xl p-6 border-2 border-[#2a2d2a] shadow-[0_6px_0_0_#2a2d2a] hover:-translate-y-1 hover:shadow-[0_8px_0_0_#f97316] hover:border-[#f97316] transition-all">
                     <div className="w-12 h-12 rounded-full bg-[#2a2c2a] flex items-center justify-center text-white mb-4"><ArrowDown className="w-6 h-6" /></div>
                     <p className="font-bold text-xl">Jongkok</p>
                     <p className="text-[#a0a0a0] text-sm mt-2">Jongkok untuk ambil ancang-ancang</p>
                   </div>
-                  <div className="bg-[#1c1e1c] rounded-3xl p-6 border border-white/5 hover:border-white/20 transition-colors">
+                  <div className="bg-[#1c1e1c] rounded-3xl p-6 border-2 border-[#2a2d2a] shadow-[0_6px_0_0_#2a2d2a] hover:-translate-y-1 hover:shadow-[0_8px_0_0_#f97316] hover:border-[#f97316] transition-all">
                     <div className="w-12 h-12 rounded-full bg-[#2a2c2a] flex items-center justify-center text-white mb-4"><ArrowUp className="w-6 h-6" /></div>
                     <p className="font-bold text-xl">Lompat</p>
                     <p className="text-[#a0a0a0] text-sm mt-2">Lompat untuk menembak bola</p>
                   </div>
-                  <div className="bg-[#1c1e1c] rounded-3xl p-6 border border-white/5 col-span-2 flex items-center gap-6 hover:border-white/20 transition-colors">
+                  <div className="bg-[#1c1e1c] rounded-3xl p-6 border-2 border-[#2a2d2a] shadow-[0_6px_0_0_#2a2d2a] hover:-translate-y-1 hover:shadow-[0_8px_0_0_#f97316] hover:border-[#f97316] transition-all col-span-2 flex items-center gap-6">
                     <div className="w-14 h-14 rounded-full bg-[#2a2c2a] flex items-center justify-center text-white shrink-0"><Hand className="w-7 h-7" /></div>
                     <div>
                       <p className="font-bold text-xl">Tangan di Atas</p>
@@ -254,7 +254,7 @@ export default function BasketShootPage() {
                   leaderboard.map((entry, idx) => (
                     <div 
                       key={idx} 
-                      className={`rounded-3xl p-6 md:p-8 flex items-center justify-between transition-transform hover:scale-[1.02] ${idx === 0 ? 'bg-[#f97316] text-black shadow-[0_8px_30px_rgba(249,115,22,0.2)]' : 'bg-[#1c1e1c] text-white border border-white/5 hover:border-[#f97316]/50'}`}
+                      className={`rounded-3xl p-6 md:p-8 flex items-center justify-between transition-all hover:-translate-y-1 border-2 ${idx === 0 ? 'bg-[#f97316] text-black border-[#ea580c] shadow-[0_6px_0_0_#ea580c] hover:shadow-[0_8px_0_0_#ea580c]' : 'bg-[#1c1e1c] text-white border-[#2a2d2a] shadow-[0_6px_0_0_#2a2d2a] hover:shadow-[0_8px_0_0_#f97316] hover:border-[#f97316]'}`}
                     >
                       <div className="flex items-center gap-6">
                         <div className={`w-14 h-14 rounded-full flex items-center justify-center font-bold text-xl ${idx === 0 ? 'bg-black/10' : 'bg-white/5'}`}>
@@ -293,7 +293,7 @@ export default function BasketShootPage() {
                <button
                   onClick={startGame}
                   disabled={!playerName.trim()}
-                  className={`flex-1 h-20 rounded-full flex items-center justify-center gap-4 text-2xl font-black tracking-widest transition-all shadow-2xl ${!playerName.trim() ? 'bg-[#1c1e1c] text-[#555] cursor-not-allowed border border-white/5' : 'bg-[#f97316] text-black hover:bg-[#ea580c] active:scale-95 hover:shadow-[0_0_40px_rgba(249,115,22,0.3)]'}`}
+                  className={`flex-1 h-20 rounded-full flex items-center justify-center gap-4 text-2xl font-black tracking-widest transition-all ${!playerName.trim() ? 'bg-[#1c1e1c] text-[#555] cursor-not-allowed border-2 border-[#2a2d2a] shadow-[0_6px_0_0_#2a2d2a]' : 'bg-[#f97316] text-black hover:bg-[#ea580c] border-2 border-[#ea580c] shadow-[0_8px_0_0_#ea580c] hover:-translate-y-1 hover:shadow-[0_10px_0_0_#ea580c] active:translate-y-[8px] active:shadow-none'}`}
                 >
                   <span className="w-3 h-3 rounded-full bg-black"></span>
                   {isGameOver ? "MAIN LAGI" : "MULAI BERMAIN"}
