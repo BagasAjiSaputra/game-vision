@@ -6,7 +6,7 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || '';
 
-export async function saveGameScore(playerName: string, gameType: string, score: number) {
+export async function saveGameScore(playerName: string, gameType: string, score: number, age?: number) {
   if (!supabaseUrl || !supabaseServiceRoleKey) {
     return { success: false, error: 'Konfigurasi Supabase tidak lengkap di server.' };
   }
@@ -30,12 +30,12 @@ export async function saveGameScore(playerName: string, gameType: string, score:
 
     if (existingData && existingData.length > 0) {
       const record = existingData[0];
-      
+
       // 2. Hanya update jika skor baru LEBIH TINGGI dari rekor sebelumnya
       if (score > record.score) {
         const { data, error } = await supabaseServer
           .from('game_scores')
-          .update({ score: score, created_at: new Date().toISOString() }) // Update skor & waktu
+          .update({ score: score, age: age, created_at: new Date().toISOString() }) // Update skor & waktu
           .eq('id', record.id);
 
         if (error) {
@@ -52,7 +52,8 @@ export async function saveGameScore(playerName: string, gameType: string, score:
         {
           player_name: playerName,
           game_type: gameType,
-          score: score
+          score: score,
+          age: age
         }
       ]);
 
@@ -130,9 +131,9 @@ export async function getTopScoresByGame(gameType: string, limit = 5) {
 }
 
 export async function getLeaderboards() {
-  const [endless, bird, basket] = await Promise.all([
+  const [endless, heli, basket] = await Promise.all([
     getTopScoresByGame('endless_runner'),
-    getTopScoresByGame('bird_runner'),
+    getTopScoresByGame('heli_runner'),
     getTopScoresByGame('basket_shoot')
   ]);
 
@@ -140,7 +141,7 @@ export async function getLeaderboards() {
     success: true,
     data: {
       endless: endless.success ? endless.data : [],
-      bird: bird.success ? bird.data : [],
+      heli: heli.success ? heli.data : [],
       basket: basket.success ? basket.data : []
     }
   };

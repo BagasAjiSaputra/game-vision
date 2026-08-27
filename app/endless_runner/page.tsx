@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import Game from "@/components/Game";
 import PoseController, { PoseState } from "@/components/PoseController";
-import { Activity, Volume2, VolumeX, AlertTriangle, ArrowUp, ArrowDown, ArrowLeftRight, ArrowLeft } from "lucide-react";
+import { Activity, Volume2, VolumeX, AlertTriangle, ArrowUp, ArrowDown, ArrowLeftRight, ArrowLeft , Sun, Moon} from "lucide-react";
 import { saveGameScore, getTopScoresByGame } from "@/app/actions";
 
 interface LeaderboardEntry {
@@ -15,16 +15,30 @@ interface LeaderboardEntry {
 
 export default function EndlessRunner() {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isLightMode, setIsLightMode] = useState(true);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('isLightMode');
+    if (saved) setIsLightMode(saved === 'true');
+    const savedTime = localStorage.getItem('gameDuration');
+    if (savedTime) setTimeLeft(parseInt(savedTime));
+  }, []);
+
+
   const [isGameOver, setIsGameOver] = useState(false);
   const [score, setScore] = useState(0);
   const [coins, setCoins] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(300);
+  const [isGameActive, setIsGameActive] = useState(false);
   
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [playerName, setPlayerName] = useState("");
+  const [playerAge, setPlayerAge] = useState<string>("");
   const [gameOverReason, setGameOverReason] = useState("");
   const [volume, setVolume] = useState(0.5);
   const [isMuted, setIsMuted] = useState(false);
   const [randomSeed, setRandomSeed] = useState("");
+  
 
   const [poseState, setPoseState] = useState<PoseState>({
     lane: 0,
@@ -82,24 +96,32 @@ export default function EndlessRunner() {
   }, []);
 
   const startGame = () => {
-    if (!playerName.trim()) return;
+    if (!playerName.trim() || !playerAge.trim()) return;
     setIsPlaying(true);
     setIsGameOver(false);
+    setIsGameActive(false);
     setScore(0);
     setCoins(0);
+    const savedTime = localStorage.getItem('gameDuration');
+    setTimeLeft(savedTime ? parseInt(savedTime) : 300);
     setGameOverReason("");
   };
 
   const handleGameOver = async (reason?: string) => {
+    setIsGameActive(false);
+
+
+
     setIsPlaying(false);
     setIsGameOver(true);
     if (reason) setGameOverReason(reason);
     if (score >= 0 && playerName.trim()) {
       try {
         const response = await saveGameScore(
-          playerName.substring(0, 20).toUpperCase(),
+          playerName.trim(),
           'endless_runner',
-          score
+          score,
+          parseInt(playerAge)
         );
         
         if (!response.success) {
@@ -115,23 +137,57 @@ export default function EndlessRunner() {
     }
   };
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === "Space" && isPlaying && !isGameActive && !isGameOver) {
+        e.preventDefault();
+        setIsGameActive(true);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isPlaying, isGameActive, isGameOver]);
+
+  useEffect(() => {
+    if (isPlaying && isGameActive && !isGameOver) {
+      const timer = setInterval(() => {
+        setTimeLeft((prev) => Math.max(0, prev - 1));
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [isPlaying, isGameActive, isGameOver]);
+
+  useEffect(() => {
+    if (isPlaying && isGameActive && !isGameOver) {
+      if (timeLeft <= 0) {
+        handleGameOver("Waktu Habis");
+      }
+    }
+  }, [timeLeft, isPlaying, isGameActive, isGameOver]);
+
   return (
-    <main className="flex min-h-screen flex-col bg-[#0a0d0c] text-white overflow-hidden relative font-sans">
+    <main className={`flex min-h-screen flex-col font-sans transition-colors duration-300 ${isLightMode ? 'bg-slate-50 text-slate-900' : 'bg-[#0a0d0c] text-white'}  overflow-hidden relative font-sans`}>
       
       {/* Dynamic HUD Overlay (In-Game) */}
       {isPlaying && (
         <div className="absolute top-0 left-0 w-full p-4 z-30 flex flex-col gap-2 pointer-events-none">
           <div className="flex justify-between items-center w-full max-w-7xl mx-auto">
             
-            <div className="flex gap-2 items-center">
-              <div className="bg-[#1c1e1c]/90 backdrop-blur-md px-4 py-3 rounded-full border border-white/5 flex items-center gap-3 shadow-lg">
-                <div className="w-2 h-2 rounded-full bg-[#d4ff00] animate-pulse"></div>
-                <span className="text-xs text-gray-400">Score</span>
-                <span className="text-lg font-bold text-white">{score}</span>
+            <div className="flex gap-4 items-center">
+              <div className="bg-[#1c1e1c]/90 backdrop-blur-md px-6 py-4 md:px-8 md:py-5 rounded-3xl border border-white/10 flex flex-col items-center gap-1 shadow-2xl">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-[#d4ff00] animate-pulse"></div>
+                  <span className="text-sm md:text-base font-bold text-gray-400 uppercase tracking-widest">Score</span>
+                </div>
+                <span className="text-4xl md:text-5xl font-black text-white">{score}</span>
               </div>
-              <div className="bg-[#1c1e1c]/90 backdrop-blur-md px-4 py-3 rounded-full border border-white/5 flex items-center gap-3 shadow-lg">
-                <span className="text-xs text-gray-400">Koin</span>
-                <span className="text-lg font-bold text-white">{coins}</span>
+              <div className="bg-[#1c1e1c]/90 backdrop-blur-md px-6 py-4 md:px-8 md:py-5 rounded-3xl border border-white/10 flex flex-col items-center gap-1 shadow-2xl">
+                <span className="text-sm md:text-base font-bold text-gray-400 uppercase tracking-widest">Koin</span>
+                <span className="text-4xl md:text-5xl font-black text-[#d4ff00]">{coins}</span>
+              </div>
+              <div className="bg-[#1c1e1c]/90 backdrop-blur-md px-6 py-4 md:px-8 md:py-5 rounded-3xl border border-white/10 flex flex-col items-center gap-1 shadow-2xl">
+                <span className="text-sm md:text-base font-bold text-gray-400 uppercase tracking-widest">Waktu</span>
+                <span className="text-4xl md:text-5xl font-black text-white">{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</span>
               </div>
             </div>
 
@@ -163,7 +219,7 @@ export default function EndlessRunner() {
                 {randomSeed && <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${randomSeed}`} alt="Profile" className="w-full h-full object-cover" />}
               </div>
               <div>
-                <p className="text-[#a0a0a0] text-sm">Selamat datang di,</p>
+                <p className={`text-sm ${isLightMode ? 'text-slate-500' : 'text-[#a0a0a0]'}`}>Selamat datang di,</p>
                 <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Endless Runner</h1>
               </div>
             </div>
@@ -171,9 +227,15 @@ export default function EndlessRunner() {
             <div className="flex items-center gap-2">
                <button 
                   onClick={() => setIsMuted(!isMuted)} 
-                  className="w-12 h-12 rounded-full bg-[#1c1e1c] flex items-center justify-center text-[#a0a0a0] border border-white/5 hover:border-[#d4ff00]/50 hover:text-white transition-colors"
+                  className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${isLightMode ? 'bg-white text-slate-700 shadow-md hover:bg-slate-100 border-transparent' : 'bg-[#1c1e1c] text-[#a0a0a0] hover:text-white border border-white/5'}`}
                 >
                   {isMuted ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
+               </button>
+               <button 
+                  onClick={() => { const next = !isLightMode; setIsLightMode(next); localStorage.setItem('isLightMode', String(next)); }} 
+                  className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${isLightMode ? 'bg-white text-slate-700 shadow-md hover:bg-slate-100 border-transparent' : 'bg-[#1c1e1c] text-[#a0a0a0] hover:text-white border border-white/5'}`}
+                >
+                  {isLightMode ? <Moon className="w-6 h-6" /> : <Sun className="w-6 h-6" />}
                </button>
             </div>
           </div>
@@ -183,26 +245,6 @@ export default function EndlessRunner() {
             {/* Left Column: Player & Controls */}
             <div className="flex-[1.2] flex flex-col gap-10">
               
-              {/* Game Over Banner */}
-              {isGameOver && (
-                <div className="bg-[#1c1e1c] rounded-3xl p-8 border border-red-500/30 relative overflow-hidden shadow-2xl">
-                  <div className="absolute top-0 right-0 w-48 h-48 bg-red-500/20 rounded-full blur-3xl -mr-20 -mt-20"></div>
-                  <div className="flex justify-between items-center mb-6">
-                    <span className="text-red-400 font-bold text-2xl tracking-tight">Permainan Berakhir</span>
-                    <span className="text-[#a0a0a0] font-medium bg-black/40 px-4 py-2 rounded-full">Skor: {score}</span>
-                  </div>
-                  <div className="bg-[#0a0d0c] rounded-2xl p-6 border border-white/5 flex gap-6 items-center">
-                    <div className="w-14 h-14 bg-red-500/10 rounded-full flex items-center justify-center text-red-500 shrink-0">
-                      <AlertTriangle className="w-7 h-7" />
-                    </div>
-                    <div>
-                      <p className="text-white font-bold text-lg">Gagal</p>
-                      <p className="text-[#a0a0a0] mt-1">Penyebab: {gameOverReason || 'Tabrakan'}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
               {/* Choose Your Name */}
               <div>
                 <h2 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight leading-tight">Atur profil<br/>Pemainmu</h2>
@@ -213,7 +255,14 @@ export default function EndlessRunner() {
                     value={playerName}
                     onChange={(e) => setPlayerName(e.target.value.toUpperCase())}
                     placeholder="ENTER NAME"
-                    className="flex-1 bg-[#1c1e1c] border border-white/5 rounded-full px-8 py-5 text-white font-bold focus:outline-none focus:border-[#d4ff00] transition-colors placeholder:text-[#555] text-xl"
+                    className={`flex-[2] rounded-full px-8 py-5 font-bold focus:outline-none transition-colors text-xl ${isLightMode ? 'bg-white border-2 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 shadow-sm' : 'bg-[#1c1e1c] border border-white/5 text-white placeholder:text-[#555] focus:border-[#d4ff00]'}`}
+                  />
+                  <input 
+                    type="number" 
+                    value={playerAge}
+                    onChange={(e) => setPlayerAge(e.target.value)}
+                    placeholder="UMUR"
+                    className={`flex-1 rounded-full px-6 py-5 font-bold focus:outline-none transition-colors text-xl ${isLightMode ? 'bg-white border-2 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 shadow-sm' : 'bg-[#1c1e1c] border border-white/5 text-white placeholder:text-[#555] focus:border-[#d4ff00]'}`}
                   />
                 </div>
               </div>
@@ -222,21 +271,21 @@ export default function EndlessRunner() {
               <div className="mt-2">
                 <h3 className="text-2xl font-bold mb-6">Kontrol MediaPipe</h3>
                 <div className="grid grid-cols-2 gap-5">
-                  <div className="bg-[#1c1e1c] rounded-3xl p-6 border-2 border-[#2a2d2a] shadow-[0_6px_0_0_#2a2d2a] hover:-translate-y-1 hover:shadow-[0_8px_0_0_#9bb800] hover:border-[#d4ff00] transition-all">
-                    <div className="w-12 h-12 rounded-full bg-[#2a2c2a] flex items-center justify-center text-white mb-4"><ArrowUp className="w-6 h-6" /></div>
-                    <p className="font-bold text-xl">Lompat</p>
-                    <p className="text-[#a0a0a0] text-sm mt-2">Lompat ke atas secara fisik</p>
+                  <div className={`rounded-3xl p-6 border-2 transition-all hover:-translate-y-1 ${isLightMode ? 'bg-white border-slate-200 shadow-[0_6px_0_0_#e2e8f0] hover:shadow-[0_8px_0_0_#10b981] hover:border-emerald-500 text-slate-800' : 'bg-[#1c1e1c] border-[#2a2d2a] shadow-[0_6px_0_0_#2a2d2a] hover:shadow-[0_8px_0_0_#9bb800] hover:border-[#d4ff00]'}`}>
+                    <div className="w-16 h-16 rounded-full bg-[#2a2c2a] flex items-center justify-center text-white mb-4"><ArrowUp className="w-9 h-9" /></div>
+                    <p className="font-bold text-3xl">Lompat</p>
+                    <p className={`text-xl mt-3 ${isLightMode ? 'text-slate-500' : 'text-[#a0a0a0]'}`}>Lompat ke atas secara fisik</p>
                   </div>
-                  <div className="bg-[#1c1e1c] rounded-3xl p-6 border-2 border-[#2a2d2a] shadow-[0_6px_0_0_#2a2d2a] hover:-translate-y-1 hover:shadow-[0_8px_0_0_#9bb800] hover:border-[#d4ff00] transition-all">
-                    <div className="w-12 h-12 rounded-full bg-[#2a2c2a] flex items-center justify-center text-white mb-4"><ArrowDown className="w-6 h-6" /></div>
-                    <p className="font-bold text-xl">Merunduk</p>
-                    <p className="text-[#a0a0a0] text-sm mt-2">Jongkok ke bawah secara fisik</p>
+                  <div className={`rounded-3xl p-6 border-2 transition-all hover:-translate-y-1 ${isLightMode ? 'bg-white border-slate-200 shadow-[0_6px_0_0_#e2e8f0] hover:shadow-[0_8px_0_0_#10b981] hover:border-emerald-500 text-slate-800' : 'bg-[#1c1e1c] border-[#2a2d2a] shadow-[0_6px_0_0_#2a2d2a] hover:shadow-[0_8px_0_0_#9bb800] hover:border-[#d4ff00]'}`}>
+                    <div className="w-16 h-16 rounded-full bg-[#2a2c2a] flex items-center justify-center text-white mb-4"><ArrowDown className="w-9 h-9" /></div>
+                    <p className="font-bold text-3xl">Merunduk</p>
+                    <p className={`text-xl mt-3 ${isLightMode ? 'text-slate-500' : 'text-[#a0a0a0]'}`}>Jongkok ke bawah secara fisik</p>
                   </div>
-                  <div className="bg-[#1c1e1c] rounded-3xl p-6 border-2 border-[#2a2d2a] shadow-[0_6px_0_0_#2a2d2a] hover:-translate-y-1 hover:shadow-[0_8px_0_0_#9bb800] hover:border-[#d4ff00] transition-all col-span-2 flex items-center gap-6">
-                    <div className="w-14 h-14 rounded-full bg-[#2a2c2a] flex items-center justify-center text-white shrink-0"><ArrowLeftRight className="w-7 h-7" /></div>
+                  <div className={`rounded-3xl p-6 border-2 transition-all hover:-translate-y-1 ${isLightMode ? 'bg-white border-slate-200 shadow-[0_6px_0_0_#e2e8f0] hover:shadow-[0_8px_0_0_#10b981] hover:border-emerald-500 text-slate-800' : 'bg-[#1c1e1c] border-[#2a2d2a] shadow-[0_6px_0_0_#2a2d2a] hover:shadow-[0_8px_0_0_#9bb800] hover:border-[#d4ff00]'} col-span-2 flex items-center gap-6`}>
+                    <div className="w-16 h-16 rounded-full bg-[#2a2c2a] flex items-center justify-center text-white shrink-0"><ArrowLeftRight className="w-9 h-9" /></div>
                     <div>
-                      <p className="font-bold text-xl">Pindah Jalur</p>
-                      <p className="text-[#a0a0a0] text-sm mt-2">Geser tubuh ke kiri atau kanan kamera</p>
+                      <p className="font-bold text-3xl">Pindah Jalur</p>
+                      <p className={`text-xl mt-3 ${isLightMode ? 'text-slate-500' : 'text-[#a0a0a0]'}`}>Geser tubuh ke kiri atau kanan kamera</p>
                     </div>
                   </div>
                 </div>
@@ -247,7 +296,7 @@ export default function EndlessRunner() {
             <div className="flex-1 flex flex-col">
               <div className="flex justify-between items-end mb-6 mt-12 md:mt-0">
                 <h3 className="text-2xl font-bold">Pelari Terbaik</h3>
-                <span className="text-[#a0a0a0] hover:text-white cursor-pointer transition-colors font-medium">Lihat Semua</span>
+                <span className={`cursor-pointer transition-colors font-medium ${isLightMode ? 'text-emerald-600 hover:text-emerald-800' : 'text-[#a0a0a0] hover:text-white'}`}>Lihat Semua</span>
               </div>
               
               <div className="flex flex-col gap-4">
@@ -255,27 +304,27 @@ export default function EndlessRunner() {
                   leaderboard.map((entry, idx) => (
                     <div 
                       key={idx} 
-                      className={`rounded-3xl p-6 md:p-8 flex items-center justify-between transition-all hover:-translate-y-1 border-2 ${idx === 0 ? 'bg-[#d4ff00] text-black border-[#9bb800] shadow-[0_6px_0_0_#9bb800] hover:shadow-[0_8px_0_0_#9bb800]' : 'bg-[#1c1e1c] text-white border-[#2a2d2a] shadow-[0_6px_0_0_#2a2d2a] hover:shadow-[0_8px_0_0_#9bb800] hover:border-[#d4ff00]'}`}
+                      className={`rounded-3xl p-6 md:p-8 flex items-center justify-between transition-all hover:-translate-y-1 border-2 ${idx === 0 ? 'bg-[#d4ff00] text-black border-[#9bb800] shadow-[0_6px_0_0_#9bb800] hover:shadow-[0_8px_0_0_#9bb800]' : (isLightMode ? `bg-white text-slate-800 border-slate-200 shadow-sm hover:border-emerald-500 hover:shadow-[0_8px_0_0_#e2e8f0]` : 'bg-[#1c1e1c] text-white border-[#2a2d2a] shadow-[0_6px_0_0_#2a2d2a] hover:shadow-[0_8px_0_0_#9bb800] hover:border-[#d4ff00]')}`}
                     >
                       <div className="flex items-center gap-6">
-                        <div className={`w-14 h-14 rounded-full flex items-center justify-center font-bold text-xl shrink-0 ${idx === 0 ? 'bg-black/10' : 'bg-white/5'}`}>
+                        <div className={`w-14 h-14 rounded-full flex items-center justify-center font-bold text-xl shrink-0 ${idx === 0 ? 'bg-black/10' : (isLightMode ? 'bg-slate-100 text-slate-500' : 'bg-white/5')}`}>
                           #{idx + 1}
                         </div>
                         <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${entry.name}`} alt="Avatar" className="w-14 h-14 rounded-full bg-black/40 shrink-0" />
                         <div>
                           <p className="font-bold text-xl md:text-2xl">{entry.name}</p>
-                          <p className={`font-medium mt-1 ${idx === 0 ? 'text-black/60' : 'text-[#a0a0a0]'}`}>{entry.date}</p>
+                          <p className={`font-medium mt-1 ${idx === 0 ? 'text-black/60' : (isLightMode ? 'text-slate-500' : 'text-[#a0a0a0]')}`}>{entry.date}</p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className={`text-sm mb-1 font-medium ${idx === 0 ? 'text-black/60' : 'text-[#a0a0a0]'}`}>Skor</p>
+                        <p className={`text-sm mb-1 font-medium ${idx === 0 ? 'text-black/60' : (isLightMode ? 'text-slate-500' : 'text-[#a0a0a0]')}`}>Skor</p>
                         <p className="font-black text-3xl md:text-4xl">{entry.score}</p>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="bg-[#1c1e1c] rounded-3xl p-12 text-center border border-white/5">
-                    <p className="text-[#a0a0a0] text-lg">Belum ada rekor.</p>
+                  <div className={`rounded-3xl p-12 text-center border ${isLightMode ? 'bg-white border-slate-200 shadow-sm' : 'bg-[#1c1e1c] border-white/5'}`}>
+                    <p className={`text-lg ${isLightMode ? 'text-slate-500' : 'text-[#a0a0a0]'}`}>Belum ada rekor.</p>
                   </div>
                 )}
               </div>
@@ -286,16 +335,16 @@ export default function EndlessRunner() {
           <div className="pb-36"></div> {/* Bottom padding for fixed button */}
           
           {/* Fixed Bottom Action Bar */}
-          <div className="fixed bottom-0 left-0 w-full p-6 md:p-8 bg-gradient-to-t from-[#0a0d0c] via-[#0a0d0c] to-transparent z-40 pointer-events-none">
+          <div className={`fixed bottom-0 left-0 w-full p-6 md:p-8 bg-gradient-to-t ${isLightMode ? 'from-slate-50 via-slate-50' : 'from-[#0a0d0c] via-[#0a0d0c]'} to-transparent z-40 pointer-events-none`}>
             <div className="w-full px-6 md:px-12 mx-auto flex items-center justify-between gap-6 pointer-events-auto">
-               <Link href="/" className="w-20 h-20 rounded-full bg-[#1c1e1c] border border-white/5 flex items-center justify-center hover:bg-[#2a2c2a] transition-colors shrink-0 shadow-2xl text-white">
+               <Link href="/" className={`w-20 h-20 rounded-full flex items-center justify-center transition-colors shrink-0 shadow-2xl ${isLightMode ? 'bg-white text-slate-700 hover:bg-slate-100 border-transparent' : 'bg-[#1c1e1c] border border-white/5 hover:bg-[#2a2c2a] text-white'}`}>
                  <ArrowLeft className="w-8 h-8" />
                </Link>
                
                <button
                   onClick={startGame}
                   disabled={!playerName.trim()}
-                  className={`flex-1 h-20 rounded-full flex items-center justify-center gap-4 text-2xl font-black tracking-widest transition-all ${!playerName.trim() ? 'bg-[#1c1e1c] text-[#555] cursor-not-allowed border-2 border-[#2a2d2a] shadow-[0_6px_0_0_#2a2d2a]' : 'bg-[#d4ff00] text-black hover:bg-[#b0d600] border-2 border-[#9bb800] shadow-[0_8px_0_0_#9bb800] hover:-translate-y-1 hover:shadow-[0_10px_0_0_#9bb800] active:translate-y-[8px] active:shadow-none'}`}
+                  className={`flex-1 h-20 rounded-full flex items-center justify-center gap-4 text-2xl font-black tracking-widest transition-all ${!playerName.trim() ? isLightMode ? 'bg-white text-slate-400 cursor-not-allowed border-2 border-slate-200 shadow-[0_6px_0_0_#e2e8f0]' : 'bg-[#1c1e1c] text-[#555] cursor-not-allowed border-2 border-[#2a2d2a] shadow-[0_6px_0_0_#2a2d2a]' : (isLightMode ? 'bg-emerald-500 text-white hover:bg-emerald-600 border-2 border-emerald-600 shadow-[0_8px_0_0_#047857] hover:-translate-y-1 hover:shadow-[0_10px_0_0_#047857] active:translate-y-[8px] active:shadow-none' : 'bg-[#d4ff00] text-black hover:bg-[#b0d600] border-2 border-[#9bb800] shadow-[0_8px_0_0_#9bb800] hover:-translate-y-1 hover:shadow-[0_10px_0_0_#9bb800] active:translate-y-[8px] active:shadow-none')}`}
                 >
                   <span className="w-3 h-3 rounded-full bg-black"></span>
                   {isGameOver ? "MAIN LAGI" : "MULAI BERMAIN"}
@@ -309,9 +358,17 @@ export default function EndlessRunner() {
       {/* Game Canvas & MediaPipe Camera Feed */}
       {isPlaying && (
         <>
+          {!isGameActive && !isGameOver && (
+            <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm pointer-events-none">
+              <div className="text-center animate-bounce">
+                <h1 className="text-7xl font-black text-white mb-6 tracking-widest drop-shadow-[0_0_15px_rgba(212,255,0,0.8)]">MULAI</h1>
+                <p className="text-2xl text-white font-bold bg-black/60 px-8 py-3 rounded-full border-2 border-[#d4ff00]">Tekan SPASI untuk memulai game</p>
+              </div>
+            </div>
+          )}
           <div className="absolute inset-0 w-full h-full">
             <Game
-              poseState={poseState}
+              poseState={isGameActive ? poseState : { ...poseState, isWalking: false, isJumping: false, isSliding: false }}
               onGameOver={handleGameOver}
               onScoreUpdate={setScore}
               onCoinsUpdate={setCoins}

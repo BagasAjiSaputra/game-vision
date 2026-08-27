@@ -219,17 +219,17 @@ export default function BasketPoseController({ onPoseState }: BasketPoseControll
   }, [onPoseState]);
 
   return (
-    <div className={`fixed bottom-4 right-4 z-50 bg-black/80 p-3 rounded-xl shadow-lg border border-orange-500/50 backdrop-blur-sm transition-all duration-300 ${isExpanded ? "w-80" : "w-52"}`}>
+    <div className={`fixed bottom-4 right-4 z-50 bg-black/80 p-4 rounded-xl shadow-lg border border-orange-500/50 backdrop-blur-sm transition-all duration-300 ${isExpanded ? "w-96" : "w-72"}`}>
       <div className="flex justify-between items-center mb-2 px-1">
-        <span className="text-white text-xs font-bold">Kamera Pose</span>
+        <span className="text-white text-sm font-bold">Kamera Pose</span>
         <button 
           onClick={() => setIsExpanded(!isExpanded)}
-          className="text-gray-300 hover:text-white bg-gray-800 hover:bg-gray-700 px-2 py-1 rounded text-[10px] font-medium transition-colors border border-gray-600 focus:outline-none"
+          className="text-gray-300 hover:text-white bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded text-xs font-medium transition-colors border border-gray-600 focus:outline-none"
         >
           {isExpanded ? "Kecilkan" : "Perbesar"}
         </button>
       </div>
-      <div className={`relative w-full rounded-lg overflow-hidden border border-gray-700 transition-all duration-300 ${isExpanded ? "h-60" : "h-36"}`}>
+      <div className={`relative w-full rounded-lg overflow-hidden border border-gray-700 transition-all duration-300 ${isExpanded ? "h-72" : "h-48"}`}>
         <video
           ref={videoRef}
           className="absolute top-0 left-0 w-full h-full object-cover hidden"
@@ -241,9 +241,10 @@ export default function BasketPoseController({ onPoseState }: BasketPoseControll
           height="240"
         ></canvas>
       </div>
-      <div className="text-white text-[10px] text-center mt-3 font-medium space-y-1">
-        <p className="text-orange-400">Gerak Kiri/Kanan: Membidik</p>
-        <p className="text-green-400">Lompat & Angkat Tangan: Shoot!</p>
+      <div className="text-white text-sm sm:text-base text-center mt-4 font-bold space-y-1">
+        <p className="text-cyan-400">1. Persiapan Tangan di Dada</p>
+        <p className="text-orange-400">2. Gerak Kanan / Kiri: Arahkan</p>
+        <p className="text-green-400">3. Lempar Tangan ke Atas: Shoot!</p>
       </div>
     </div>
   );

@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import BasketPoseController, { BasketPoseState } from "@/components/BasketPoseController";
-import BasketGame from "@/components/BasketGame";
+import HeliGame from "@/components/HeliGame";
+import HeliPoseController, { HeliPoseState } from "@/components/HeliPoseController";
 import Link from "next/link";
-import { Activity, Volume2, VolumeX, Clock, ArrowDown, ArrowUp, Hand, ArrowLeft, ArrowLeftRight , Sun, Moon} from "lucide-react";
+import { Activity, Volume2, VolumeX, AlertTriangle, Hand, ArrowLeft , Sun, Moon} from "lucide-react";
 import { saveGameScore, getTopScoresByGame } from "@/app/actions";
 
 export interface LeaderboardEntry {
@@ -13,7 +13,7 @@ export interface LeaderboardEntry {
   date: string;
 }
 
-export default function BasketShootPage() {
+export default function HeliRunner() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLightMode, setIsLightMode] = useState(true);
 
@@ -26,18 +26,18 @@ export default function BasketShootPage() {
 
 
   const [isGameOver, setIsGameOver] = useState(false);
+  const [gameOverReason, setGameOverReason] = useState("");
   const [score, setScore] = useState(0);
-  const scoreRef = useRef(0);
   const [timeLeft, setTimeLeft] = useState(300);
   const [isGameActive, setIsGameActive] = useState(false);
-  const [poseState, setPoseState] = useState<BasketPoseState | null>(null);
+  const [hasStartedPlaying, setHasStartedPlaying] = useState(false);
+  const [poseState, setPoseState] = useState<HeliPoseState>({ lane: 0, isFlying: false });
   
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [playerName, setPlayerName] = useState("");
   const [playerAge, setPlayerAge] = useState<string>("");
   const [volume, setVolume] = useState(0.5);
   const [isMuted, setIsMuted] = useState(false);
-  const [gameOverReason, setGameOverReason] = useState("");
   const [randomSeed, setRandomSeed] = useState("");
   
 
@@ -53,7 +53,7 @@ export default function BasketShootPage() {
 
   useEffect(() => {
     if (isPlaying) {
-      const audio = new Audio('/music/basket_shoot1.mp3');
+      const audio = new Audio('/music/heli_run1.mp3');
       audio.loop = true;
       audio.volume = isMuted ? 0 : volume;
       audio.play().catch(e => console.error("Audio playback failed:", e));
@@ -75,7 +75,7 @@ export default function BasketShootPage() {
 
   const fetchLeaderboard = async () => {
     try {
-      const response = await getTopScoresByGame('basket_shoot');
+      const response = await getTopScoresByGame('heli_runner');
       if (response.success && response.data) {
         setLeaderboard(response.data);
       }
@@ -95,9 +95,9 @@ export default function BasketShootPage() {
     setIsGameActive(false);
     setGameOverReason("");
     setScore(0);
-    scoreRef.current = 0;
     const savedTime = localStorage.getItem('gameDuration');
     setTimeLeft(savedTime ? parseInt(savedTime) : 300);
+    setHasStartedPlaying(false);
   };
 
   const handleGameOver = async (reason?: string) => {
@@ -108,12 +108,11 @@ export default function BasketShootPage() {
     setIsPlaying(false);
     setIsGameOver(true);
     if (reason) setGameOverReason(reason);
-    
     if (score >= 0 && playerName.trim()) {
       try {
         const response = await saveGameScore(
           playerName.substring(0, 20).toUpperCase(),
-          'basket_shoot',
+          'heli_runner',
           score,
           parseInt(playerAge)
         );
@@ -143,13 +142,19 @@ export default function BasketShootPage() {
   }, [isPlaying, isGameActive, isGameOver]);
 
   useEffect(() => {
+    if (isPlaying && poseState.isFlying && !hasStartedPlaying) {
+      setHasStartedPlaying(true);
+    }
+  }, [isPlaying, poseState.isFlying, hasStartedPlaying]);
+
+  useEffect(() => {
     if (isPlaying && isGameActive && !isGameOver) {
       const timer = setInterval(() => {
         setTimeLeft(prev => Math.max(0, prev - 1));
       }, 1000);
       return () => clearInterval(timer);
     }
-  }, [isPlaying, isGameActive, isGameOver]);
+  }, [isPlaying, isGameActive, isGameOver, hasStartedPlaying]);
 
   useEffect(() => {
     if (isPlaying && isGameActive && !isGameOver) {
@@ -170,7 +175,7 @@ export default function BasketShootPage() {
             <div className="flex gap-4 items-center">
               <div className="bg-[#1c1e1c]/90 backdrop-blur-md px-6 py-4 md:px-8 md:py-5 rounded-3xl border border-white/10 flex flex-col items-center gap-1 shadow-2xl">
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-[#f97316] animate-pulse"></div>
+                  <div className="w-3 h-3 rounded-full bg-[#3b82f6] animate-pulse"></div>
                   <span className="text-sm md:text-base font-bold text-gray-400 uppercase tracking-widest">Score</span>
                 </div>
                 <span className="text-4xl md:text-5xl font-black text-white">{score}</span>
@@ -210,7 +215,7 @@ export default function BasketShootPage() {
               </div>
               <div>
                 <p className={`text-sm ${isLightMode ? 'text-slate-500' : 'text-[#a0a0a0]'}`}>Selamat datang di,</p>
-                <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Basket Shoot</h1>
+                <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Heli Runner</h1>
               </div>
             </div>
             
@@ -244,15 +249,15 @@ export default function BasketShootPage() {
                     maxLength={15}
                     value={playerName}
                     onChange={(e) => setPlayerName(e.target.value.toUpperCase())}
-                    placeholder="ENTER NAME"
-                    className={`flex-1 rounded-full px-8 py-5 font-bold focus:outline-none transition-colors text-xl ${isLightMode ? 'bg-white border-2 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-orange-500 shadow-sm' : 'bg-[#1c1e1c] border border-white/5 text-white placeholder:text-[#555] focus:border-[#f97316]'}`}
+                    placeholder="NAMA PEMAIN"
+                    className={`flex-1 rounded-full px-8 py-5 font-bold focus:outline-none transition-colors text-xl ${isLightMode ? 'bg-white border-2 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-blue-500 shadow-sm shadow-sm' : 'bg-[#1c1e1c] border border-white/5 text-white placeholder:text-[#555] focus:border-[#3b82f6]'}`}
                   />
                   <input 
                     type="number" 
                     value={playerAge}
                     onChange={(e) => setPlayerAge(e.target.value)}
                     placeholder="UMUR"
-                    className={`flex-1 rounded-full px-6 py-5 font-bold focus:outline-none transition-colors text-xl ${isLightMode ? 'bg-white border-2 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-orange-500 shadow-sm' : 'bg-[#1c1e1c] border border-white/5 text-white placeholder:text-[#555] focus:border-[#f97316]'}`}
+                    className={`flex-1 rounded-full px-6 py-5 font-bold focus:outline-none transition-colors text-xl ${isLightMode ? 'bg-white border-2 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-blue-500 shadow-sm' : 'bg-[#1c1e1c] border border-white/5 text-white placeholder:text-[#555] focus:border-[#3b82f6]'}`}
                   />
                 </div>
               </div>
@@ -261,28 +266,20 @@ export default function BasketShootPage() {
               <div className="mt-2">
                 <h3 className="text-2xl font-bold mb-6">Kontrol MediaPipe</h3>
                 <div className="grid grid-cols-1 gap-5">
-                  <div className={`rounded-3xl p-6 border-2 transition-all hover:-translate-y-1 ${isLightMode ? 'bg-white border-slate-200 shadow-[0_6px_0_0_#e2e8f0] hover:shadow-[0_8px_0_0_#f97316] hover:border-orange-500 text-slate-800' : 'bg-[#1c1e1c] border-[#2a2d2a] shadow-[0_6px_0_0_#2a2d2a] hover:shadow-[0_8px_0_0_#f97316] hover:border-[#f97316]'} flex flex-col gap-4`}>
+                  <div className={`rounded-3xl p-6 border-2 transition-all hover:-translate-y-1 ${isLightMode ? 'bg-white border-slate-200 shadow-[0_6px_0_0_#e2e8f0] hover:shadow-[0_8px_0_0_#3b82f6] hover:border-blue-500 text-slate-800' : 'bg-[#1c1e1c] border-[#2a2d2a] shadow-[0_6px_0_0_#2a2d2a] hover:shadow-[0_8px_0_0_#3b82f6] hover:border-[#3b82f6]'} flex flex-col gap-4`}>
                     <div className="flex items-center gap-6">
                       <div className="w-16 h-16 rounded-full bg-[#2a2c2a] flex items-center justify-center text-white shrink-0"><Activity className="w-9 h-9" /></div>
                       <div>
-                        <p className="font-bold text-3xl">Persiapan</p>
-                        <p className={`text-xl mt-2 ${isLightMode ? 'text-slate-500' : 'text-[#a0a0a0]'}`}>Persiapan tangan di dada</p>
-                      </div>
-                    </div>
-                    <div className="w-full h-px bg-white/10 my-2"></div>
-                    <div className="flex items-center gap-6">
-                      <div className="w-16 h-16 rounded-full bg-[#2a2c2a] flex items-center justify-center text-white shrink-0"><ArrowLeftRight className="w-9 h-9" /></div>
-                      <div>
-                        <p className="font-bold text-3xl">Arahkan</p>
-                        <p className={`text-xl mt-2 ${isLightMode ? 'text-slate-500' : 'text-[#a0a0a0]'}`}>Arahkan dengan bergerak ke kanan / kiri</p>
+                        <p className="font-bold text-3xl">Maju Kedepan</p>
+                        <p className={`text-xl mt-2 ${isLightMode ? 'text-slate-500' : 'text-[#a0a0a0]'}`}>Naikkan 1 kaki untuk maju kedepan</p>
                       </div>
                     </div>
                     <div className="w-full h-px bg-white/10 my-2"></div>
                     <div className="flex items-center gap-6">
                       <div className="w-16 h-16 rounded-full bg-[#2a2c2a] flex items-center justify-center text-white shrink-0"><Hand className="w-9 h-9" /></div>
                       <div>
-                        <p className="font-bold text-3xl">Menembak</p>
-                        <p className={`text-xl mt-2 ${isLightMode ? 'text-slate-500' : 'text-[#a0a0a0]'}`}>Lempar untuk menembak bola</p>
+                        <p className="font-bold text-3xl">Pindah Jalur</p>
+                        <p className={`text-xl mt-2 ${isLightMode ? 'text-slate-500' : 'text-[#a0a0a0]'}`}>Miringkan ke kanan / kiri untuk berpindah jalur</p>
                       </div>
                     </div>
                   </div>
@@ -293,8 +290,8 @@ export default function BasketShootPage() {
             {/* Right Column: Leaderboard */}
             <div className="flex-1 flex flex-col">
               <div className="flex justify-between items-end mb-6 mt-12 md:mt-0">
-                <h3 className="text-2xl font-bold">Penembak Terbaik</h3>
-                <span className={`cursor-pointer transition-colors font-medium ${isLightMode ? 'text-orange-600 hover:text-orange-800' : 'text-[#a0a0a0] hover:text-white'}`}>Lihat Semua</span>
+                <h3 className="text-2xl font-bold">Penerbang Terbaik</h3>
+                <span className={`cursor-pointer transition-colors font-medium ${isLightMode ? 'text-blue-600 hover:text-blue-800' : 'text-[#a0a0a0] hover:text-white'}`}>Lihat Semua</span>
               </div>
               
               <div className="flex flex-col gap-4">
@@ -302,7 +299,7 @@ export default function BasketShootPage() {
                   leaderboard.map((entry, idx) => (
                     <div 
                       key={idx} 
-                      className={`rounded-3xl p-6 md:p-8 flex items-center justify-between transition-all hover:-translate-y-1 border-2 ${idx === 0 ? 'bg-[#f97316] text-black border-[#ea580c] shadow-[0_6px_0_0_#ea580c] hover:shadow-[0_8px_0_0_#ea580c]' : (isLightMode ? `bg-white text-slate-800 border-slate-200 shadow-sm hover:border-orange-500 hover:shadow-[0_8px_0_0_#e2e8f0]` : 'bg-[#1c1e1c] text-white border-[#2a2d2a] shadow-[0_6px_0_0_#2a2d2a] hover:shadow-[0_8px_0_0_#f97316] hover:border-[#f97316]')}`}
+                      className={`rounded-3xl p-6 md:p-8 flex items-center justify-between transition-all hover:-translate-y-1 border-2 ${idx === 0 ? 'bg-[#3b82f6] text-white border-[#2563eb] shadow-[0_6px_0_0_#2563eb] hover:shadow-[0_8px_0_0_#2563eb]' : (isLightMode ? `bg-white text-slate-800 border-slate-200 shadow-sm hover:border-blue-500 hover:shadow-[0_8px_0_0_#e2e8f0]` : 'bg-[#1c1e1c] text-white border-[#2a2d2a] shadow-[0_6px_0_0_#2a2d2a] hover:shadow-[0_8px_0_0_#3b82f6] hover:border-[#3b82f6]')}`}
                     >
                       <div className="flex items-center gap-6">
                         <div className={`w-14 h-14 rounded-full flex items-center justify-center font-bold text-xl shrink-0 ${idx === 0 ? 'bg-black/10' : (isLightMode ? 'bg-slate-100 text-slate-500' : 'bg-white/5')}`}>
@@ -311,11 +308,11 @@ export default function BasketShootPage() {
                         <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${entry.name}`} alt="Avatar" className="w-14 h-14 rounded-full bg-black/40 shrink-0" />
                         <div>
                           <p className="font-bold text-xl md:text-2xl">{entry.name}</p>
-                          <p className={`font-medium mt-1 ${idx === 0 ? 'text-black/60' : (isLightMode ? 'text-slate-500' : 'text-[#a0a0a0]')}`}>{entry.date}</p>
+                          <p className={`font-medium mt-1 ${idx === 0 ? 'text-white/60' : 'text-[#a0a0a0]'}`}>{entry.date}</p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className={`text-sm mb-1 font-medium ${idx === 0 ? 'text-black/60' : (isLightMode ? 'text-slate-500' : 'text-[#a0a0a0]')}`}>Skor</p>
+                        <p className={`text-sm mb-1 font-medium ${idx === 0 ? 'text-white/60' : 'text-[#a0a0a0]'}`}>Skor</p>
                         <p className="font-black text-3xl md:text-4xl">{entry.score}</p>
                       </div>
                     </div>
@@ -342,9 +339,9 @@ export default function BasketShootPage() {
                <button
                   onClick={startGame}
                   disabled={!playerName.trim()}
-                  className={`flex-1 h-20 rounded-full flex items-center justify-center gap-4 text-2xl font-black tracking-widest transition-all ${!playerName.trim() ? isLightMode ? 'bg-white text-slate-400 cursor-not-allowed border-2 border-slate-200 shadow-[0_6px_0_0_#e2e8f0]' : 'bg-[#1c1e1c] text-[#555] cursor-not-allowed border-2 border-[#2a2d2a] shadow-[0_6px_0_0_#2a2d2a]' : (isLightMode ? 'bg-orange-500 text-white hover:bg-orange-600 border-2 border-orange-600 shadow-[0_8px_0_0_#c2410c] hover:-translate-y-1 hover:shadow-[0_10px_0_0_#c2410c] active:translate-y-[8px] active:shadow-none' : 'bg-[#f97316] text-black hover:bg-[#ea580c] border-2 border-[#ea580c] shadow-[0_8px_0_0_#ea580c] hover:-translate-y-1 hover:shadow-[0_10px_0_0_#ea580c] active:translate-y-[8px] active:shadow-none')}`}
+                  className={`flex-1 h-20 rounded-full flex items-center justify-center gap-4 text-2xl font-black tracking-widest transition-all ${!playerName.trim() ? isLightMode ? 'bg-white text-slate-400 cursor-not-allowed border-2 border-slate-200 shadow-[0_6px_0_0_#e2e8f0]' : 'bg-[#1c1e1c] text-[#555] cursor-not-allowed border-2 border-[#2a2d2a] shadow-[0_6px_0_0_#2a2d2a]' : (isLightMode ? 'bg-blue-500 text-white hover:bg-blue-600 border-2 border-blue-600 shadow-[0_8px_0_0_#1d4ed8] hover:-translate-y-1 hover:shadow-[0_10px_0_0_#1d4ed8] active:translate-y-[8px] active:shadow-none' : 'bg-[#3b82f6] text-white hover:bg-[#2563eb] border-2 border-[#2563eb] shadow-[0_8px_0_0_#2563eb] hover:-translate-y-1 hover:shadow-[0_10px_0_0_#2563eb] active:translate-y-[8px] active:shadow-none')}`}
                 >
-                  <span className="w-3 h-3 rounded-full bg-black"></span>
+                  <span className="w-3 h-3 rounded-full bg-white"></span>
                   {isGameOver ? "MAIN LAGI" : "MULAI BERMAIN"}
                 </button>
             </div>
@@ -359,21 +356,19 @@ export default function BasketShootPage() {
           {!isGameActive && !isGameOver && (
             <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm pointer-events-none">
               <div className="text-center animate-bounce">
-                <h1 className="text-7xl font-black text-white mb-6 tracking-widest drop-shadow-[0_0_15px_rgba(249,115,22,0.8)]">MULAI</h1>
-                <p className="text-2xl text-white font-bold bg-black/60 px-8 py-3 rounded-full border-2 border-[#f97316]">Tekan SPASI untuk memulai game</p>
+                <h1 className="text-7xl font-black text-white mb-6 tracking-widest drop-shadow-[0_0_15px_rgba(59,130,246,0.8)]">MULAI</h1>
+                <p className="text-2xl text-white font-bold bg-black/60 px-8 py-3 rounded-full border-2 border-[#3b82f6]">Tekan SPASI untuk memulai game</p>
               </div>
             </div>
           )}
           <div className="absolute inset-0 w-full h-full">
-            <BasketGame
-              poseState={!poseState ? null : (isGameActive ? poseState : { ...poseState, isShooting: false, isJumping: false } as BasketPoseState)}
-              onScoreUpdate={(score) => {
-                setScore(score);
-                scoreRef.current = score;
-              }}
+            <HeliGame
+              poseState={isGameActive ? poseState : { ...poseState, isFlying: false }}
+              onGameOver={handleGameOver}
+              onScoreUpdate={setScore}
             />
           </div>
-          <BasketPoseController onPoseState={setPoseState} />
+          <HeliPoseController onPoseState={setPoseState} />
         </>
       )}
       
