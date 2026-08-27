@@ -1,20 +1,74 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
-export type PoseAction = "left" | "right" | "jump" | "none";
+export type PoseState = {
+  lane: number;
+  isWalking: boolean;
+  isJumping: boolean;
+  isSliding: boolean;
+};
 
 interface PoseControllerProps {
-  onAction: (action: PoseAction) => void;
+  onPoseState: (state: PoseState) => void;
 }
 
-export default function PoseController({ onAction }: PoseControllerProps) {
+export default function PoseController({ onPoseState }: PoseControllerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   
-  // State variables for debounce
-  const lastActionRef = useRef<PoseAction>("none");
-  const lastActionTimeRef = useRef<number>(0);
+  // Ref states
+  const prevLandmarksRef = useRef<any>(null);
+  const lastWalkTimeRef = useRef<number>(0);
+  const lastEmittedStateRef = useRef<string>("");
+  const baselineYRef = useRef<number | null>(null);
+
+  // Fallback keyboard states
+  const kbStateRef = useRef<{ lane: number; isJumping: boolean; isSliding: boolean }>({
+    lane: 0,
+    isJumping: false,
+    isSliding: false,
+  });
+
+  // Handle Keyboard Fallback Controls
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      let changed = false;
+      if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") {
+        kbStateRef.current.lane = Math.max(-1, kbStateRef.current.lane - 1);
+        changed = true;
+      } else if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") {
+        kbStateRef.current.lane = Math.min(1, kbStateRef.current.lane + 1);
+        changed = true;
+      } else if (e.key === "ArrowUp" || e.key === "w" || e.key === "W" || e.key === " ") {
+        kbStateRef.current.isJumping = true;
+        changed = true;
+        setTimeout(() => {
+          kbStateRef.current.isJumping = false;
+        }, 600);
+      } else if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") {
+        kbStateRef.current.isSliding = true;
+        changed = true;
+        setTimeout(() => {
+          kbStateRef.current.isSliding = false;
+        }, 600);
+      }
+
+      if (changed) {
+        onPoseState({
+          lane: kbStateRef.current.lane,
+          isWalking: true,
+          isJumping: kbStateRef.current.isJumping,
+          isSliding: kbStateRef.current.isSliding,
+        });
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onPoseState]);
   
   useEffect(() => {
     const videoElement = videoRef.current;
@@ -30,7 +84,6 @@ export default function PoseController({ onAction }: PoseControllerProps) {
     let animationFrameId: number;
 
     const initMediaPipe = async () => {
-      // Load script dynamically to avoid Next.js Turbopack export errors
       if (!(window as any).Pose) {
         await new Promise((resolve) => {
           const script = document.createElement("script");
@@ -61,92 +114,173 @@ export default function PoseController({ onAction }: PoseControllerProps) {
 
       pose.onResults((results: any) => {
         if (!isActive) return;
-        // Draw skeleton
-      canvasCtx.save();
-      canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-      
-      // We flip horizontally when drawing the image so it acts like a mirror
-      canvasCtx.scale(-1, 1);
-      canvasCtx.translate(-canvasElement.width, 0);
-      
-      canvasCtx.drawImage(
-        results.image,
-        0,
-        0,
-        canvasElement.width,
-        canvasElement.height
-      );
 
-      if (results.poseLandmarks) {
-        // Simple visualization: draw dots on left/right knee
-        const landmarks = results.poseLandmarks;
-        const leftKnee = landmarks[25]; // Mediapipe left is screen right when mirrored
-        const rightKnee = landmarks[26];
-        const leftHip = landmarks[23];
-        const rightHip = landmarks[24];
-        const leftShoulder = landmarks[11];
-        const rightShoulder = landmarks[12];
-        const leftWrist = landmarks[15];
-        const rightWrist = landmarks[16];
+        canvasCtx.save();
+        canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
         
-        // Draw knees
-        canvasCtx.fillStyle = "red";
-        canvasCtx.beginPath();
-        canvasCtx.arc(leftKnee.x * canvasElement.width, leftKnee.y * canvasElement.height, 5, 0, 2 * Math.PI);
-        canvasCtx.fill();
-
-        canvasCtx.fillStyle = "blue";
-        canvasCtx.beginPath();
-        canvasCtx.arc(rightKnee.x * canvasElement.width, rightKnee.y * canvasElement.height, 5, 0, 2 * Math.PI);
-        canvasCtx.fill();
-
-        // Draw wrists
-        canvasCtx.fillStyle = "yellow";
-        canvasCtx.beginPath();
-        canvasCtx.arc(leftWrist.x * canvasElement.width, leftWrist.y * canvasElement.height, 5, 0, 2 * Math.PI);
-        canvasCtx.fill();
-
-        canvasCtx.beginPath();
-        canvasCtx.arc(rightWrist.x * canvasElement.width, rightWrist.y * canvasElement.height, 5, 0, 2 * Math.PI);
-        canvasCtx.fill();
-
-        // Threshold for knee raise
-        const leftKneeRaised = leftKnee.y < leftHip.y + 0.15; 
-        const rightKneeRaised = rightKnee.y < rightHip.y + 0.15;
+        // Mirror horizontally
+        canvasCtx.scale(-1, 1);
+        canvasCtx.translate(-canvasElement.width, 0);
         
-        // Threshold for hands raise
-        const bothHandsRaised = leftWrist.y < leftShoulder.y && rightWrist.y < rightShoulder.y;
-        
-        let currentAction: PoseAction = "none";
-        
-        if (bothHandsRaised) {
-            currentAction = "jump";
-        } else if (leftKneeRaised) {
-            currentAction = "left"; // User lifts their left leg (which is on the left side of screen)
-        } else if (rightKneeRaised) {
-            currentAction = "right"; // User lifts their right leg
+        canvasCtx.drawImage(
+          results.image,
+          0,
+          0,
+          canvasElement.width,
+          canvasElement.height
+        );
+
+        if (results.poseLandmarks) {
+          const landmarks = results.poseLandmarks;
+          const leftShoulder = landmarks[11];
+          const rightShoulder = landmarks[12];
+          const leftElbow = landmarks[13];
+          const rightElbow = landmarks[14];
+          const leftWrist = landmarks[15];
+          const rightWrist = landmarks[16];
+          const leftHip = landmarks[23];
+          const rightHip = landmarks[24];
+          const leftKnee = landmarks[25];
+          const rightKnee = landmarks[26];
+          const leftAnkle = landmarks[27];
+          const rightAnkle = landmarks[28];
+
+          // Draw skeleton joints
+          const drawJoint = (point: any, color: string) => {
+            if (!point) return;
+            canvasCtx.fillStyle = color;
+            canvasCtx.beginPath();
+            canvasCtx.arc(point.x * canvasElement.width, point.y * canvasElement.height, 4, 0, 2 * Math.PI);
+            canvasCtx.fill();
+          };
+
+          const drawLine = (p1: any, p2: any, color: string) => {
+            if (!p1 || !p2) return;
+            canvasCtx.beginPath();
+            canvasCtx.moveTo(p1.x * canvasElement.width, p1.y * canvasElement.height);
+            canvasCtx.lineTo(p2.x * canvasElement.width, p2.y * canvasElement.height);
+            canvasCtx.strokeStyle = color;
+            canvasCtx.lineWidth = 2;
+            canvasCtx.stroke();
+          };
+
+          // Draw lines
+          drawLine(leftShoulder, rightShoulder, "#ffffff");
+          drawLine(leftShoulder, leftHip, "#ffffff");
+          drawLine(rightShoulder, rightHip, "#ffffff");
+          drawLine(leftHip, rightHip, "#ffffff");
+          
+          drawLine(leftShoulder, leftElbow, "#ffffff");
+          drawLine(leftElbow, leftWrist, "#ffffff");
+          
+          drawLine(rightShoulder, rightElbow, "#ffffff");
+          drawLine(rightElbow, rightWrist, "#ffffff");
+          
+          drawLine(leftHip, leftKnee, "#ffffff");
+          drawLine(leftKnee, leftAnkle, "#ffffff");
+          
+          drawLine(rightHip, rightKnee, "#ffffff");
+          drawLine(rightKnee, rightAnkle, "#ffffff");
+
+          drawJoint(leftShoulder, "#00ffcc");
+          drawJoint(rightShoulder, "#00ffcc");
+          drawJoint(leftElbow, "#00ffcc");
+          drawJoint(rightElbow, "#00ffcc");
+          drawJoint(leftHip, "#ff0077");
+          drawJoint(rightHip, "#ff0077");
+          drawJoint(leftKnee, "#ffcc00");
+          drawJoint(rightKnee, "#ffcc00");
+          drawJoint(leftAnkle, "#ffcc00");
+          drawJoint(rightAnkle, "#ffcc00");
+          drawJoint(leftWrist, "#00ff00");
+          drawJoint(rightWrist, "#00ff00");
+
+          // Lane detection based on body center X
+          const centerX = (leftHip.x + rightHip.x) / 2;
+          let lane = 0;
+          if (centerX > 0.58) lane = -1; // Leaning left (mirrored)
+          else if (centerX < 0.42) lane = 1;  // Leaning right (mirrored)
+
+          // Vertical position (Y is 0 at top, 1 at bottom)
+          const shoulderY = (leftShoulder.y + rightShoulder.y) / 2;
+
+          // Adaptive baseline posture Y
+          if (baselineYRef.current === null) {
+            baselineYRef.current = shoulderY;
+          } else {
+            // Slow exponential moving average for baseline
+            baselineYRef.current = baselineYRef.current * 0.98 + shoulderY * 0.02;
+          }
+
+          const currentBaseline = baselineYRef.current;
+
+          // Jump detection: shoulder moves UP (smaller Y) or wrists raised above shoulders
+          const handsUp = leftWrist.y < leftShoulder.y || rightWrist.y < rightShoulder.y;
+          const isJumping = shoulderY < currentBaseline - 0.065 || handsUp;
+
+          // Slide/Crouch detection: shoulder/hip drops DOWN (larger Y)
+          const isSliding = shoulderY > currentBaseline + 0.06;
+
+          // Walking / Motion detection (Running in place)
+          const now = Date.now();
+          if (prevLandmarksRef.current) {
+            const prevLeftKnee = prevLandmarksRef.current[25];
+            const prevRightKnee = prevLandmarksRef.current[26];
+            
+            // Hitung perubahan vertikal (Y) dan horizontal (X)
+            const deltaL_Y = Math.abs(leftKnee.y - prevLeftKnee.y);
+            const deltaR_Y = Math.abs(rightKnee.y - prevRightKnee.y);
+            const deltaL_X = Math.abs(leftKnee.x - prevLeftKnee.x);
+            const deltaR_X = Math.abs(rightKnee.x - prevRightKnee.x);
+            
+            // Gunakan threshold menengah agar lari lebih mudah terdeteksi tapi tetap menolak gerakan mikro
+            const WALK_THRESHOLD_Y = 0.018;
+            const WALK_THRESHOLD_X = 0.015;
+            
+            if (deltaL_Y > WALK_THRESHOLD_Y || deltaR_Y > WALK_THRESHOLD_Y || deltaL_X > WALK_THRESHOLD_X || deltaR_X > WALK_THRESHOLD_X) {
+              lastWalkTimeRef.current = now;
+            }
+          }
+          prevLandmarksRef.current = landmarks;
+          
+          // Kurangi waktu toleransi jalan agar karakter lebih cepat berhenti saat pemain diam
+          const isWalking = (now - lastWalkTimeRef.current) < 400;
+
+          // Emit state update when state changes
+          const stateStr = `${lane},${isWalking},${isJumping},${isSliding}`;
+          if (stateStr !== lastEmittedStateRef.current) {
+            kbStateRef.current.lane = lane;
+            onPoseState({ lane, isWalking, isJumping, isSliding });
+            lastEmittedStateRef.current = stateStr;
+          }
+
+          // Un-mirror canvas context for text rendering so text is readable
+          canvasCtx.restore();
+          canvasCtx.save();
+          
+          // Draw Status Badge Overlay on Camera
+          canvasCtx.fillStyle = "rgba(0, 0, 0, 0.65)";
+          canvasCtx.fillRect(8, 8, 140, 60);
+          canvasCtx.strokeStyle = "#3b82f6";
+          canvasCtx.lineWidth = 1;
+          canvasCtx.strokeRect(8, 8, 140, 60);
+
+          canvasCtx.fillStyle = "#ffffff";
+          canvasCtx.font = "bold 11px sans-serif";
+          canvasCtx.fillText(`JALUR: ${lane === -1 ? "KIRI" : lane === 1 ? "KANAN" : "TENGAH"}`, 14, 24);
+
+          canvasCtx.fillStyle = isJumping ? "#38bdf8" : isSliding ? "#f43f5e" : "#a3e635";
+          canvasCtx.fillText(`AKSI: ${isJumping ? "JUMP!" : isSliding ? "SLIDE!" : isWalking ? "RUN" : "DIAM"}`, 14, 44);
         }
-        
-        const now = Date.now();
-        // Debounce actions
-        if (currentAction !== "none" && (currentAction !== lastActionRef.current || now - lastActionTimeRef.current > 800)) {
-            // Because camera is mirrored, we might need to invert left/right depending on how user expects it.
-            // If they raise the leg on the left side of the screen (their right leg), they want to go left?
-            // Usually, lifting left leg -> go left. Let's just pass the action.
-            onAction(currentAction);
-            lastActionRef.current = currentAction;
-            lastActionTimeRef.current = now;
-        } else if (currentAction === "none" && now - lastActionTimeRef.current > 500) {
-            // Reset after 0.5s of no action
-             lastActionRef.current = "none";
-        }
-      }
-      canvasCtx.restore();
-    });
-    };    const startCamera = async () => {
+
+        canvasCtx.restore();
+      });
+    };
+
+    const startCamera = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { width: 320, height: 240, facingMode: "user" } 
+          video: { width: 640, height: 480, facingMode: "user" } 
         });
         
         if (!isActive || !videoElement) return;
@@ -185,27 +319,48 @@ export default function PoseController({ onAction }: PoseControllerProps) {
         pose.close();
       }
     };
-  }, [onAction]);
+  }, [onPoseState]);
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 bg-black p-2 rounded-lg shadow-lg border border-gray-700">
-      <div className="relative w-48 h-36">
+    <div className={`fixed z-50 bg-black/90 p-2 rounded-xl shadow-2xl border border-blue-500/30 backdrop-blur-md transition-all duration-300 ${isFullscreen ? "inset-4 flex flex-col" : `bottom-4 right-4 ${isExpanded ? "w-80" : "w-52"}`}`}>
+      <div className="flex justify-between items-center mb-2 px-1">
+        <span className="text-white text-xs font-bold">Kamera Pose</span>
+        <div className="flex gap-2">
+          {!isFullscreen && (
+            <button 
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="text-gray-300 hover:text-white bg-gray-800 hover:bg-gray-700 px-2 py-1 rounded text-[10px] font-medium transition-colors border border-gray-600 focus:outline-none"
+            >
+              {isExpanded ? "Kecilkan" : "Perbesar"}
+            </button>
+          )}
+          <button 
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            className="text-gray-300 hover:text-white bg-gray-800 hover:bg-gray-700 px-2 py-1 rounded text-[10px] font-medium transition-colors border border-gray-600 focus:outline-none"
+          >
+            {isFullscreen ? "Tutup Full" : "Full"}
+          </button>
+        </div>
+      </div>
+      <div className={`relative w-full overflow-hidden rounded-lg transition-all duration-300 bg-black/50 ${isFullscreen ? "flex-1" : isExpanded ? "h-60" : "h-36"}`}>
         <video
           ref={videoRef}
-          className="absolute top-0 left-0 w-full h-full object-cover hidden"
+          className="absolute top-0 left-0 w-full h-full object-contain hidden"
         ></video>
         <canvas
           ref={canvasRef}
-          className="absolute top-0 left-0 w-full h-full object-cover rounded-md"
-          width="320"
-          height="240"
+          className="absolute top-0 left-0 w-full h-full object-contain rounded-md"
+          width="640"
+          height="480"
         ></canvas>
       </div>
-      <p className="text-white text-xs text-center mt-2 font-mono">
-        Raise Left Leg: Move Left<br/>
-        Raise Right Leg: Move Right<br/>
-        Raise Both Hands: Jump
+      <p className={`text-gray-300 text-[10px] text-center mt-2 font-mono leading-tight ${isFullscreen ? "text-sm" : ""}`}>
+        Miring Kiri/Kanan: Pindah Jalur<br/>
+        Lompat / Tangan Atas: Jump<br/>
+        Jongkok / Squat: Slide<br/>
+        Alt: Gunakan Keyboard (A/D/W/S)
       </p>
     </div>
   );
 }
+
