@@ -6,7 +6,7 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || '';
 
-export async function saveGameScore(playerName: string, gameType: string, score: number) {
+export async function saveGameScore(playerName: string, gameType: string, score: number, age?: number) {
   if (!supabaseUrl || !supabaseServiceRoleKey) {
     return { success: false, error: 'Konfigurasi Supabase tidak lengkap di server.' };
   }
@@ -35,7 +35,7 @@ export async function saveGameScore(playerName: string, gameType: string, score:
       if (score > record.score) {
         const { data, error } = await supabaseServer
           .from('game_scores')
-          .update({ score: score, created_at: new Date().toISOString() }) // Update skor & waktu
+          .update({ score: score, age: age, created_at: new Date().toISOString() }) // Update skor & waktu
           .eq('id', record.id);
 
         if (error) {
@@ -52,7 +52,8 @@ export async function saveGameScore(playerName: string, gameType: string, score:
         {
           player_name: playerName,
           game_type: gameType,
-          score: score
+          score: score,
+          age: age
         }
       ]);
 

@@ -33,6 +33,7 @@ export default function EndlessRunner() {
   
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [playerName, setPlayerName] = useState("");
+  const [playerAge, setPlayerAge] = useState<string>("");
   const [gameOverReason, setGameOverReason] = useState("");
   const [volume, setVolume] = useState(0.5);
   const [isMuted, setIsMuted] = useState(false);
@@ -95,7 +96,7 @@ export default function EndlessRunner() {
   }, []);
 
   const startGame = () => {
-    if (!playerName.trim()) return;
+    if (!playerName.trim() || !playerAge.trim()) return;
     setIsPlaying(true);
     setIsGameOver(false);
     setIsGameActive(false);
@@ -119,7 +120,8 @@ export default function EndlessRunner() {
         const response = await saveGameScore(
           playerName.trim(),
           'endless_runner',
-          score
+          score,
+          parseInt(playerAge)
         );
         
         if (!response.success) {
@@ -254,6 +256,13 @@ export default function EndlessRunner() {
                     onChange={(e) => setPlayerName(e.target.value.toUpperCase())}
                     placeholder="ENTER NAME"
                     className={`flex-[2] rounded-full px-8 py-5 font-bold focus:outline-none transition-colors text-xl ${isLightMode ? 'bg-white border-2 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 shadow-sm' : 'bg-[#1c1e1c] border border-white/5 text-white placeholder:text-[#555] focus:border-[#d4ff00]'}`}
+                  />
+                  <input 
+                    type="number" 
+                    value={playerAge}
+                    onChange={(e) => setPlayerAge(e.target.value)}
+                    placeholder="UMUR"
+                    className={`flex-1 rounded-full px-6 py-5 font-bold focus:outline-none transition-colors text-xl ${isLightMode ? 'bg-white border-2 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 shadow-sm' : 'bg-[#1c1e1c] border border-white/5 text-white placeholder:text-[#555] focus:border-[#d4ff00]'}`}
                   />
                 </div>
               </div>

@@ -34,6 +34,7 @@ export default function BasketShootPage() {
   
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [playerName, setPlayerName] = useState("");
+  const [playerAge, setPlayerAge] = useState<string>("");
   const [volume, setVolume] = useState(0.5);
   const [isMuted, setIsMuted] = useState(false);
   const [gameOverReason, setGameOverReason] = useState("");
@@ -88,7 +89,7 @@ export default function BasketShootPage() {
   }, []);
 
   const startGame = () => {
-    if (!playerName.trim()) return;
+    if (!playerName.trim() || !playerAge.trim()) return;
     setIsPlaying(true);
     setIsGameOver(false);
     setIsGameActive(false);
@@ -113,7 +114,8 @@ export default function BasketShootPage() {
         const response = await saveGameScore(
           playerName.substring(0, 20).toUpperCase(),
           'basket_shoot',
-          score
+          score,
+          parseInt(playerAge)
         );
         
         if (!response.success) {
@@ -242,6 +244,13 @@ export default function BasketShootPage() {
                     onChange={(e) => setPlayerName(e.target.value.toUpperCase())}
                     placeholder="ENTER NAME"
                     className={`flex-1 rounded-full px-8 py-5 font-bold focus:outline-none transition-colors text-xl ${isLightMode ? 'bg-white border-2 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-orange-500 shadow-sm' : 'bg-[#1c1e1c] border border-white/5 text-white placeholder:text-[#555] focus:border-[#f97316]'}`}
+                  />
+                  <input 
+                    type="number" 
+                    value={playerAge}
+                    onChange={(e) => setPlayerAge(e.target.value)}
+                    placeholder="UMUR"
+                    className={`flex-1 rounded-full px-6 py-5 font-bold focus:outline-none transition-colors text-xl ${isLightMode ? 'bg-white border-2 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-orange-500 shadow-sm' : 'bg-[#1c1e1c] border border-white/5 text-white placeholder:text-[#555] focus:border-[#f97316]'}`}
                   />
                 </div>
               </div>
