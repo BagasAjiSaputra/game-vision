@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import BasketPoseController, { BasketPoseState } from "@/components/BasketPoseController";
 import BasketGame from "@/components/BasketGame";
 import Link from "next/link";
-import { Activity, Volume2, VolumeX, Clock, ArrowDown, ArrowUp, Hand, ArrowLeft } from "lucide-react";
+import { Activity, Volume2, VolumeX, Clock, ArrowDown, ArrowUp, Hand, ArrowLeft, ArrowLeftRight } from "lucide-react";
 import { saveGameScore, getTopScoresByGame } from "@/app/actions";
 
 export interface LeaderboardEntry {
@@ -252,11 +252,29 @@ export default function BasketShootPage() {
               <div className="mt-2">
                 <h3 className="text-2xl font-bold mb-6">Kontrol MediaPipe</h3>
                 <div className="grid grid-cols-1 gap-5">
-                  <div className="bg-[#1c1e1c] rounded-3xl p-6 border-2 border-[#2a2d2a] shadow-[0_6px_0_0_#2a2d2a] hover:-translate-y-1 hover:shadow-[0_8px_0_0_#f97316] hover:border-[#f97316] transition-all flex items-center gap-6">
-                    <div className="w-14 h-14 rounded-full bg-[#2a2c2a] flex items-center justify-center text-white shrink-0"><Hand className="w-7 h-7" /></div>
-                    <div>
-                      <p className="font-bold text-xl">Ayunkan Tangan ke Atas</p>
-                      <p className="text-[#a0a0a0] text-sm mt-2">Gerakkan kedua tangan Anda ke atas dengan cepat secara bersamaan untuk melakukan tembakan bola (*shoot*).</p>
+                  <div className="bg-[#1c1e1c] rounded-3xl p-6 border-2 border-[#2a2d2a] shadow-[0_6px_0_0_#2a2d2a] hover:-translate-y-1 hover:shadow-[0_8px_0_0_#f97316] hover:border-[#f97316] transition-all flex flex-col gap-4">
+                    <div className="flex items-center gap-6">
+                      <div className="w-16 h-16 rounded-full bg-[#2a2c2a] flex items-center justify-center text-white shrink-0"><Activity className="w-9 h-9" /></div>
+                      <div>
+                        <p className="font-bold text-3xl">Persiapan</p>
+                        <p className="text-[#a0a0a0] text-xl mt-2">Persiapan tangan di dada</p>
+                      </div>
+                    </div>
+                    <div className="w-full h-px bg-white/10 my-2"></div>
+                    <div className="flex items-center gap-6">
+                      <div className="w-16 h-16 rounded-full bg-[#2a2c2a] flex items-center justify-center text-white shrink-0"><ArrowLeftRight className="w-9 h-9" /></div>
+                      <div>
+                        <p className="font-bold text-3xl">Arahkan</p>
+                        <p className="text-[#a0a0a0] text-xl mt-2">Arahkan dengan bergerak ke kanan / kiri</p>
+                      </div>
+                    </div>
+                    <div className="w-full h-px bg-white/10 my-2"></div>
+                    <div className="flex items-center gap-6">
+                      <div className="w-16 h-16 rounded-full bg-[#2a2c2a] flex items-center justify-center text-white shrink-0"><Hand className="w-9 h-9" /></div>
+                      <div>
+                        <p className="font-bold text-3xl">Menembak</p>
+                        <p className="text-[#a0a0a0] text-xl mt-2">Lempar untuk menembak bola</p>
+                      </div>
                     </div>
                   </div>
                 </div>

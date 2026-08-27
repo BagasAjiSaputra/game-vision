@@ -322,27 +322,27 @@ export default function PoseController({ onPoseState }: PoseControllerProps) {
   }, [onPoseState]);
 
   return (
-    <div className={`fixed z-50 bg-black/90 p-2 rounded-xl shadow-2xl border border-blue-500/30 backdrop-blur-md transition-all duration-300 ${isFullscreen ? "inset-4 flex flex-col" : `bottom-4 right-4 ${isExpanded ? "w-80" : "w-52"}`}`}>
+    <div className={`fixed z-50 bg-black/90 p-3 rounded-xl shadow-2xl border border-blue-500/30 backdrop-blur-md transition-all duration-300 ${isFullscreen ? "inset-4 flex flex-col" : `bottom-4 right-4 ${isExpanded ? "w-96" : "w-72"}`}`}>
       <div className="flex justify-between items-center mb-2 px-1">
-        <span className="text-white text-xs font-bold">Kamera Pose</span>
+        <span className="text-white text-sm font-bold">Kamera Pose</span>
         <div className="flex gap-2">
           {!isFullscreen && (
             <button 
               onClick={() => setIsExpanded(!isExpanded)}
-              className="text-gray-300 hover:text-white bg-gray-800 hover:bg-gray-700 px-2 py-1 rounded text-[10px] font-medium transition-colors border border-gray-600 focus:outline-none"
+              className="text-gray-300 hover:text-white bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded text-xs font-medium transition-colors border border-gray-600 focus:outline-none"
             >
               {isExpanded ? "Kecilkan" : "Perbesar"}
             </button>
           )}
           <button 
             onClick={() => setIsFullscreen(!isFullscreen)}
-            className="text-gray-300 hover:text-white bg-gray-800 hover:bg-gray-700 px-2 py-1 rounded text-[10px] font-medium transition-colors border border-gray-600 focus:outline-none"
+            className="text-gray-300 hover:text-white bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded text-xs font-medium transition-colors border border-gray-600 focus:outline-none"
           >
             {isFullscreen ? "Tutup Full" : "Full"}
           </button>
         </div>
       </div>
-      <div className={`relative w-full overflow-hidden rounded-lg transition-all duration-300 bg-black/50 ${isFullscreen ? "flex-1" : isExpanded ? "h-60" : "h-36"}`}>
+      <div className={`relative w-full overflow-hidden rounded-lg transition-all duration-300 bg-black/50 ${isFullscreen ? "flex-1" : isExpanded ? "h-72" : "h-48"}`}>
         <video
           ref={videoRef}
           className="absolute top-0 left-0 w-full h-full object-contain hidden"
@@ -354,7 +354,7 @@ export default function PoseController({ onPoseState }: PoseControllerProps) {
           height="480"
         ></canvas>
       </div>
-      <p className={`text-gray-300 text-[10px] text-center mt-2 font-mono leading-tight ${isFullscreen ? "text-sm" : ""}`}>
+      <p className={`text-gray-300 text-sm sm:text-base text-center mt-3 font-mono font-bold leading-tight ${isFullscreen ? "text-lg" : ""}`}>
         Miring Kiri/Kanan: Pindah Jalur<br/>
         Lompat / Tangan Atas: Jump<br/>
         Jongkok / Squat: Slide<br/>

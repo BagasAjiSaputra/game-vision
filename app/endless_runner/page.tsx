@@ -223,20 +223,20 @@ export default function EndlessRunner() {
                 <h3 className="text-2xl font-bold mb-6">Kontrol MediaPipe</h3>
                 <div className="grid grid-cols-2 gap-5">
                   <div className="bg-[#1c1e1c] rounded-3xl p-6 border-2 border-[#2a2d2a] shadow-[0_6px_0_0_#2a2d2a] hover:-translate-y-1 hover:shadow-[0_8px_0_0_#9bb800] hover:border-[#d4ff00] transition-all">
-                    <div className="w-12 h-12 rounded-full bg-[#2a2c2a] flex items-center justify-center text-white mb-4"><ArrowUp className="w-6 h-6" /></div>
-                    <p className="font-bold text-xl">Lompat</p>
-                    <p className="text-[#a0a0a0] text-sm mt-2">Lompat ke atas secara fisik</p>
+                    <div className="w-16 h-16 rounded-full bg-[#2a2c2a] flex items-center justify-center text-white mb-4"><ArrowUp className="w-9 h-9" /></div>
+                    <p className="font-bold text-3xl">Lompat</p>
+                    <p className="text-[#a0a0a0] text-xl mt-3">Lompat ke atas secara fisik</p>
                   </div>
                   <div className="bg-[#1c1e1c] rounded-3xl p-6 border-2 border-[#2a2d2a] shadow-[0_6px_0_0_#2a2d2a] hover:-translate-y-1 hover:shadow-[0_8px_0_0_#9bb800] hover:border-[#d4ff00] transition-all">
-                    <div className="w-12 h-12 rounded-full bg-[#2a2c2a] flex items-center justify-center text-white mb-4"><ArrowDown className="w-6 h-6" /></div>
-                    <p className="font-bold text-xl">Merunduk</p>
-                    <p className="text-[#a0a0a0] text-sm mt-2">Jongkok ke bawah secara fisik</p>
+                    <div className="w-16 h-16 rounded-full bg-[#2a2c2a] flex items-center justify-center text-white mb-4"><ArrowDown className="w-9 h-9" /></div>
+                    <p className="font-bold text-3xl">Merunduk</p>
+                    <p className="text-[#a0a0a0] text-xl mt-3">Jongkok ke bawah secara fisik</p>
                   </div>
                   <div className="bg-[#1c1e1c] rounded-3xl p-6 border-2 border-[#2a2d2a] shadow-[0_6px_0_0_#2a2d2a] hover:-translate-y-1 hover:shadow-[0_8px_0_0_#9bb800] hover:border-[#d4ff00] transition-all col-span-2 flex items-center gap-6">
-                    <div className="w-14 h-14 rounded-full bg-[#2a2c2a] flex items-center justify-center text-white shrink-0"><ArrowLeftRight className="w-7 h-7" /></div>
+                    <div className="w-16 h-16 rounded-full bg-[#2a2c2a] flex items-center justify-center text-white shrink-0"><ArrowLeftRight className="w-9 h-9" /></div>
                     <div>
-                      <p className="font-bold text-xl">Pindah Jalur</p>
-                      <p className="text-[#a0a0a0] text-sm mt-2">Geser tubuh ke kiri atau kanan kamera</p>
+                      <p className="font-bold text-3xl">Pindah Jalur</p>
+                      <p className="text-[#a0a0a0] text-xl mt-3">Geser tubuh ke kiri atau kanan kamera</p>
                     </div>
                   </div>
                 </div>

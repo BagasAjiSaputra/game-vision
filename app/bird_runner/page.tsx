@@ -217,11 +217,21 @@ export default function BirdRunner() {
               <div className="mt-2">
                 <h3 className="text-2xl font-bold mb-6">Kontrol MediaPipe</h3>
                 <div className="grid grid-cols-1 gap-5">
-                  <div className="bg-[#1c1e1c] rounded-3xl p-6 border-2 border-[#2a2d2a] shadow-[0_6px_0_0_#2a2d2a] hover:-translate-y-1 hover:shadow-[0_8px_0_0_#3b82f6] hover:border-[#3b82f6] transition-all flex items-center gap-6">
-                    <div className="w-14 h-14 rounded-full bg-[#2a2c2a] flex items-center justify-center text-white shrink-0"><Hand className="w-7 h-7" /></div>
-                    <div>
-                      <p className="font-bold text-xl">Kepakkan Sayap</p>
-                      <p className="text-[#a0a0a0] text-sm mt-2">Kepakkan kedua lenganmu secara nyata untuk terbang</p>
+                  <div className="bg-[#1c1e1c] rounded-3xl p-6 border-2 border-[#2a2d2a] shadow-[0_6px_0_0_#2a2d2a] hover:-translate-y-1 hover:shadow-[0_8px_0_0_#3b82f6] hover:border-[#3b82f6] transition-all flex flex-col gap-4">
+                    <div className="flex items-center gap-6">
+                      <div className="w-16 h-16 rounded-full bg-[#2a2c2a] flex items-center justify-center text-white shrink-0"><Activity className="w-9 h-9" /></div>
+                      <div>
+                        <p className="font-bold text-3xl">Maju Kedepan</p>
+                        <p className="text-[#a0a0a0] text-xl mt-2">Naikkan 1 kaki untuk maju kedepan</p>
+                      </div>
+                    </div>
+                    <div className="w-full h-px bg-white/10 my-2"></div>
+                    <div className="flex items-center gap-6">
+                      <div className="w-16 h-16 rounded-full bg-[#2a2c2a] flex items-center justify-center text-white shrink-0"><Hand className="w-9 h-9" /></div>
+                      <div>
+                        <p className="font-bold text-3xl">Pindah Jalur</p>
+                        <p className="text-[#a0a0a0] text-xl mt-2">Miringkan ke kanan / kiri untuk berpindah jalur</p>
+                      </div>
                     </div>
                   </div>
                 </div>
