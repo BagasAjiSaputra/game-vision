@@ -2,9 +2,9 @@
 
 import { useRef, useState, useEffect, useMemo } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { useGLTF, Environment, Box, useAnimations, Sky, Sparkles, Html, Cloud, Clouds } from "@react-three/drei";
+import { useGLTF, Environment, Box, useAnimations, Sky, Sparkles, Html, Cloud, Clouds, CameraShake } from "@react-three/drei";
 import * as THREE from "three";
-import { BirdPoseState } from "./BirdPoseController";
+import { HeliPoseState } from "./HeliPoseController";
 
 // Constants
 const LANE_WIDTH = 3;
@@ -55,9 +55,9 @@ function CustomFPS() {
 }
 
 // ==========================================
-// Bird Player Component
+// Heli Player Component
 // ==========================================
-function BirdPlayer({
+function HeliPlayer({
   currentLane,
   isFlying,
   onGameOver
@@ -172,10 +172,12 @@ interface ObstacleData {
   z: number;
 }
 
-function FighterJetObstacle({ lane, z, speed, onRemove, onHitPlayer, playerLane, playerY }: {
-  lane: number; z: number; speed: number; onRemove: () => void; onHitPlayer: () => void; playerLane: number; playerY: number;
+function FighterJetObstacle({ lane, z, speed, onRemove, onHitPlayer, onPass, playerLane, playerY }: {
+  lane: number; z: number; speed: number; onRemove: () => void; onHitPlayer: () => void; onPass: () => void; playerLane: number; playerY: number;
 }) {
   const group = useRef<THREE.Group>(null);
+  const hitRegisteredRef = useRef(false);
+  const passedRef = useRef(false);
 
   useFrame((state, delta) => {
     if (!group.current) return;
@@ -184,21 +186,30 @@ function FighterJetObstacle({ lane, z, speed, onRemove, onHitPlayer, playerLane,
       group.current.position.z += (speed + 14) * delta;
     }
 
-    if (group.current.position.z > DESPAWN_Z) {
+    const obZ = group.current.position.z;
+
+    if (obZ > DESPAWN_Z) {
       onRemove();
     }
 
     // Collision Detection
-    const obZ = group.current.position.z;
     const obX = lane * LANE_WIDTH;
     const pX = playerLane * LANE_WIDTH;
     
     // Adjusted hit box for jet (it is wide due to wings)
     if (
+      !hitRegisteredRef.current &&
       Math.abs(obZ) < 2.0 && 
       Math.abs(obX - pX) < 1.8
     ) {
+      hitRegisteredRef.current = true;
       onHitPlayer();
+    }
+
+    // Pass Detection
+    if (obZ > 2.0 && !hitRegisteredRef.current && !passedRef.current) {
+      passedRef.current = true;
+      onPass();
     }
   });
 
@@ -269,15 +280,16 @@ function ForestGround({ speed }: { speed: number }) {
 }
 
 // ==========================================
-// Main Bird Game Component
+// Main Heli Game Component
 // ==========================================
-export default function BirdGame({ poseState, onGameOver, onScoreUpdate }: {
-  poseState: BirdPoseState;
+export default function HeliGame({ poseState, onGameOver, onScoreUpdate }: {
+  poseState: HeliPoseState;
   onGameOver: () => void;
   onScoreUpdate: (score: number) => void;
 }) {
   const [obstacles, setObstacles] = useState<ObstacleData[]>([]);
   const [hasStarted, setHasStarted] = useState(false);
+  const [shake, setShake] = useState(false);
   const score = useRef(0);
   const nextObstacleId = useRef(0);
   
@@ -305,14 +317,10 @@ export default function BirdGame({ poseState, onGameOver, onScoreUpdate }: {
         ...prev,
         { id: nextObstacleId.current++, lane: randomLane, z: OBSTACLE_SPAWN_Z }
       ]);
-      
-      // Update Score
-      score.current += 10;
-      onScoreUpdate(score.current);
     }, 1200);
 
     return () => clearInterval(interval);
-  }, [onScoreUpdate, isFlying]);
+  }, [isFlying]);
 
   const removeObstacle = (id: number) => {
     setObstacles((prev) => prev.filter((o) => o.id !== id));
@@ -321,6 +329,16 @@ export default function BirdGame({ poseState, onGameOver, onScoreUpdate }: {
   return (
     <Canvas camera={{ position: [0, 5, 8], fov: 60 }}>
       <CustomFPS />
+      {shake && (
+        <CameraShake
+          maxYaw={0.1} // Max amount camera can yaw in either direction
+          maxPitch={0.1} // Max amount camera can pitch in either direction
+          maxRoll={0.1} // Max amount camera can roll in either direction
+          yawFrequency={15} // Frequency of the the yaw rotation
+          pitchFrequency={15} // Frequency of the pitch rotation
+          rollFrequency={15} // Frequency of the roll rotation
+        />
+      )}
       
       {/* Dynamic Environment */}
       <color attach="background" args={['#2c3e50']} />
@@ -332,7 +350,7 @@ export default function BirdGame({ poseState, onGameOver, onScoreUpdate }: {
       
       <Environment preset="forest" />
 
-      <BirdPlayer 
+      <HeliPlayer 
         currentLane={lane} 
         isFlying={isFlying}
         onGameOver={onGameOver}
@@ -346,7 +364,12 @@ export default function BirdGame({ poseState, onGameOver, onScoreUpdate }: {
           speed={currentSpeed}
           onRemove={() => removeObstacle(obs.id)}
           onHitPlayer={() => {
-            onGameOver();
+            setShake(true);
+            setTimeout(() => setShake(false), 500);
+          }}
+          onPass={() => {
+            score.current += 10;
+            onScoreUpdate(score.current);
           }}
           playerLane={lane}
           playerY={2} // Approximated helicopter height

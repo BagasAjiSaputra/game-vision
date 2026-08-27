@@ -46,7 +46,7 @@ export default function ScoreLogPage() {
   const getGameName = (type: string) => {
     switch(type) {
       case 'endless_runner': return 'Endless Runner';
-      case 'bird_runner': return 'Bird Runner';
+      case 'heli_runner': return 'Heli Runner';
       case 'basket_shoot': return 'Basket Shoot';
       default: return type;
     }
@@ -55,7 +55,7 @@ export default function ScoreLogPage() {
   const getGameColor = (type: string) => {
     switch(type) {
       case 'endless_runner': return 'text-[#d4ff00] bg-[#d4ff00]/10 border-[#d4ff00]/30';
-      case 'bird_runner': return 'text-[#3b82f6] bg-[#3b82f6]/10 border-[#3b82f6]/30';
+      case 'heli_runner': return 'text-[#3b82f6] bg-[#3b82f6]/10 border-[#3b82f6]/30';
       case 'basket_shoot': return 'text-[#f97316] bg-[#f97316]/10 border-[#f97316]/30';
       default: return 'text-white bg-white/10 border-white/30';
     }
@@ -95,7 +95,7 @@ export default function ScoreLogPage() {
             />
           </div>
           <div className="flex gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 hide-scrollbar">
-            {['all', 'endless_runner', 'bird_runner', 'basket_shoot'].map(filter => (
+            {['all', 'endless_runner', 'heli_runner', 'basket_shoot'].map(filter => (
               <button 
                 key={filter}
                 onClick={() => setFilterGame(filter)}

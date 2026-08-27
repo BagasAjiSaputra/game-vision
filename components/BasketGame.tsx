@@ -206,12 +206,12 @@ export default function BasketGame({ poseState, onScoreUpdate, onMiss }: BasketG
       {/* Game State Overlay */}
       {gameState === "scored" && (
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 z-20 animate-bounce">
-          <p className="text-6xl font-black text-green-400 drop-shadow-[0_0_15px_rgba(74,222,128,0.8)]">SWISH!</p>
+          <p className="text-6xl font-black text-green-400 drop-shadow-[0_0_15px_rgba(74,222,128,0.8)]">GOAL!</p>
         </div>
       )}
       {gameState === "missed" && (
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 z-20 animate-pulse">
-          <p className="text-6xl font-black text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.8)]">MISSED!</p>
+          <p className="text-6xl font-black text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.8)]">GAGAL!</p>
         </div>
       )}
 
@@ -267,18 +267,6 @@ export default function BasketGame({ poseState, onScoreUpdate, onMiss }: BasketG
         ✋🏽
       </div>
 
-      {/* Instructions */}
-      {!poseState && (
-        <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center z-40 text-white p-8 text-center">
-          <h2 className="text-4xl font-bold mb-4 text-orange-500">BASKET SHOOT</h2>
-          <p className="text-lg max-w-md">
-            Izinkan akses kamera untuk bermain. <br/><br/>
-            1. Geser badan ke Kiri/Kanan untuk mengarahkan target (Crosshair biru).<br/>
-            2. Melompat dan angkat tangan ke atas secara bersamaan untuk menembak bola!
-          </p>
-          <div className="mt-8 animate-spin w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full" />
-        </div>
-      )}
     </div>
   );
 }

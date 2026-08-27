@@ -2,16 +2,16 @@
 
 import { useEffect, useRef, useState } from "react";
 
-export type BirdPoseState = {
+export type HeliPoseState = {
   lane: number;
   isFlying: boolean;
 };
 
-interface BirdPoseControllerProps {
-  onPoseState: (state: BirdPoseState) => void;
+interface HeliPoseControllerProps {
+  onPoseState: (state: HeliPoseState) => void;
 }
 
-export default function BirdPoseController({ onPoseState }: BirdPoseControllerProps) {
+export default function HeliPoseController({ onPoseState }: HeliPoseControllerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -144,7 +144,7 @@ export default function BirdPoseController({ onPoseState }: BirdPoseControllerPr
           drawJoint(leftWrist, "cyan", 8);
           drawJoint(rightWrist, "cyan", 8);
 
-          // Bird pose detection logic
+          // Heli pose detection logic
           // Tilt detection (Banking)
           let lane = 0;
           // In MediaPipe, Y goes down.

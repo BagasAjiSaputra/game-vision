@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Activity, RefreshCw, ArrowRight, Trophy } from "lucide-react";
+import { Activity, RefreshCw, ArrowRight, Trophy, Sun, Moon } from "lucide-react";
 import { getLeaderboards } from "@/app/actions";
 
 export interface LeaderboardEntry {
@@ -14,8 +14,10 @@ export interface LeaderboardEntry {
 
 export default function Home() {
   const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
+  const [isLightMode, setIsLightMode] = useState(true);
+  const [gameDuration, setGameDuration] = useState(300);
   
-  const [birdLeaderboard, setBirdLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [heliLeaderboard, setHeliLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [endlessLeaderboard, setEndlessLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [basketLeaderboard, setBasketLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [overallLeaderboard, setOverallLeaderboard] = useState<{name: string, average: number}[]>([]);
@@ -25,6 +27,13 @@ export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
+    const saved = localStorage.getItem('isLightMode');
+    if (saved) setIsLightMode(saved === 'true');
+    const savedTime = localStorage.getItem('gameDuration');
+    if (savedTime) setGameDuration(parseInt(savedTime));
+  }, []);
+
+  useEffect(() => {
     setRandomSeed(Math.random().toString(36).substring(7));
 
     // Load leaderboards from Supabase
@@ -32,31 +41,31 @@ export default function Home() {
       try {
         const response = await getLeaderboards();
         if (response.success && response.data) {
-          const bird = response.data.bird || [];
+          const heli = response.data.heli || [];
           const endless = response.data.endless || [];
           const basket = response.data.basket || [];
           
-          setBirdLeaderboard(bird);
+          setHeliLeaderboard(heli);
           setEndlessLeaderboard(endless);
           setBasketLeaderboard(basket);
           
           // Calculate overall average
-          const playerScores: Record<string, {bird: number, endless: number, basket: number}> = {};
+          const playerScores: Record<string, {heli: number, endless: number, basket: number}> = {};
           
-          [...bird, ...endless, ...basket].forEach(entry => {
+          [...heli, ...endless, ...basket].forEach(entry => {
             if (!playerScores[entry.name]) {
-              playerScores[entry.name] = { bird: 0, endless: 0, basket: 0 };
+              playerScores[entry.name] = { heli: 0, endless: 0, basket: 0 };
             }
           });
           
-          bird.forEach(entry => playerScores[entry.name].bird = Math.max(playerScores[entry.name].bird, entry.score));
+          heli.forEach(entry => playerScores[entry.name].heli = Math.max(playerScores[entry.name].heli, entry.score));
           endless.forEach(entry => playerScores[entry.name].endless = Math.max(playerScores[entry.name].endless, entry.score));
           basket.forEach(entry => playerScores[entry.name].basket = Math.max(playerScores[entry.name].basket, entry.score));
           
           const overall = Object.entries(playerScores).map(([name, scores]) => {
             return {
               name,
-              average: Math.round((scores.bird + scores.endless + scores.basket) / 3)
+              average: Math.round((scores.heli + scores.endless + scores.basket) / 3)
             };
           }).sort((a, b) => b.average - a.average).slice(0, 5);
           
@@ -71,7 +80,7 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="flex min-h-screen flex-col bg-[#0a0d0c] text-white font-sans px-6 py-12 md:px-12 md:py-16 w-full">
+    <main className={`flex min-h-screen flex-col font-sans px-6 py-12 md:px-12 md:py-16 w-full transition-colors duration-300 ${isLightMode ? 'bg-slate-50 text-slate-900' : 'bg-[#0a0d0c] text-white'}`}>
       
       {/* Top Header */}
       <div className="flex justify-between items-center mb-10">
@@ -80,61 +89,84 @@ export default function Home() {
              {randomSeed && <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${randomSeed}`} alt="Profile" className="w-full h-full object-cover" />}
           </div>
           <div>
-            <p className="text-[#a0a0a0] text-xs">Selamat Pagi!</p>
+            <p className={`text-xs ${isLightMode ? 'text-slate-500' : 'text-[#a0a0a0]'}`}>Selamat Pagi!</p>
             <h1 className="text-lg font-bold">Pemain</h1>
           </div>
+        </div>
+        <div className="flex items-center gap-2 md:gap-4">
+          {/* Game Duration Selector */}
+          <div className={`flex items-center p-1 rounded-full border ${isLightMode ? 'bg-white border-slate-200 shadow-sm' : 'bg-[#1c1e1c] border-white/5'}`}>
+            {[60, 180, 300].map((time) => (
+              <button
+                key={time}
+                onClick={() => { setGameDuration(time); localStorage.setItem('gameDuration', String(time)); }}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${gameDuration === time ? (isLightMode ? 'bg-emerald-500 text-white shadow-md' : 'bg-[#d4ff00] text-black') : (isLightMode ? 'text-slate-500 hover:bg-slate-100' : 'text-[#a0a0a0] hover:text-white')}`}
+              >
+                {time / 60}m
+              </button>
+            ))}
+          </div>
+
+          <button 
+            onClick={() => { const next = !isLightMode; setIsLightMode(next); localStorage.setItem('isLightMode', String(next)); }} 
+            className={`w-12 h-12 shrink-0 rounded-full flex items-center justify-center transition-all ${isLightMode ? 'bg-white text-slate-700 shadow-sm border border-slate-200 hover:bg-slate-100' : 'bg-[#1c1e1c] text-[#a0a0a0] hover:text-white border border-white/5'}`}
+          >
+            {isLightMode ? <Moon className="w-6 h-6" /> : <Sun className="w-6 h-6" />}
+          </button>
         </div>
       </div>
 
       <div className="flex flex-col h-full w-full pb-20">
           
           <div className="flex justify-between items-end mb-6">
-            <h2 className="text-2xl font-bold">Pilih permainan<br/><span className="text-[#d4ff00]">Favoritmu</span></h2>
+            <h2 className="text-2xl font-bold">Pilih permainan<br/><span className={isLightMode ? "text-indigo-600" : "text-[#d4ff00]"}>Favoritmu</span></h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             
             {/* Endless Runner */}
-            <Link href="/endless_runner" className="group rounded-3xl bg-[#1c1e1c] text-white p-6 border-2 border-[#2a2d2a] flex flex-col justify-between relative overflow-hidden transition-all hover:-translate-y-1 hover:bg-[#d4ff00] hover:text-black hover:border-[#d4ff00] shadow-[0_8px_0_0_#2a2d2a] hover:shadow-[0_10px_0_0_#9bb800] active:translate-y-[8px] active:shadow-none min-h-[220px]">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 group-hover:bg-white/20 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none transition-colors"></div>
+            <Link href="/endless_runner" className={`group rounded-3xl p-6 border-2 flex flex-col justify-between relative overflow-hidden transition-all min-h-[220px] ${isLightMode ? 'bg-gradient-to-br from-emerald-400 to-emerald-600 border-emerald-600 text-white shadow-[0_8px_0_0_#047857] hover:-translate-y-1 hover:shadow-[0_10px_0_0_#064e3b] active:translate-y-[8px] active:shadow-none' : 'bg-[#1c1e1c] text-white border-[#2a2d2a] hover:-translate-y-1 hover:bg-[#d4ff00] hover:text-black hover:border-[#d4ff00] shadow-[0_8px_0_0_#2a2d2a] hover:shadow-[0_10px_0_0_#9bb800] active:translate-y-[8px] active:shadow-none'}`}>
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 group-hover:bg-white/20 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none transition-colors"></div>
               <div>
                  <div className="flex justify-between items-start mb-2">
                    <h3 className="text-2xl font-black uppercase tracking-tight">Endless<br/>Runner</h3>
-                   <span className="bg-white/5 group-hover:bg-black text-[#a0a0a0] group-hover:text-[#d4ff00] text-[10px] font-bold px-3 py-1.5 rounded-full uppercase tracking-wider transition-colors">Populer</span>
+                   <span className={`text-[10px] font-bold px-3 py-1.5 rounded-full uppercase tracking-wider transition-colors ${isLightMode ? 'bg-white/20 text-white' : 'bg-white/5 group-hover:bg-black text-[#a0a0a0] group-hover:text-[#d4ff00]'}`}>Populer</span>
                  </div>
-                 <p className="text-[#a0a0a0] group-hover:text-black/60 text-sm font-medium mt-1 transition-colors">Berlari dan hindari rintangan</p>
+                 <p className={`text-sm font-medium mt-1 transition-colors ${isLightMode ? 'text-emerald-100' : 'text-[#a0a0a0] group-hover:text-black/60'}`}>Berlari dan hindari rintangan</p>
               </div>
               <div className="flex items-center gap-3 mt-auto">
-                 <div className="w-10 h-10 rounded-full bg-white/10 group-hover:bg-black flex items-center justify-center text-white transition-colors"><ArrowRight className="w-5 h-5" /></div>
-                 <span className="font-bold text-sm uppercase text-[#a0a0a0] group-hover:text-black transition-colors">Mainkan</span>
+                 <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${isLightMode ? 'bg-white/20 text-white' : 'bg-white/10 group-hover:bg-black text-white'}`}><ArrowRight className="w-5 h-5" /></div>
+                 <span className={`font-bold text-sm uppercase transition-colors ${isLightMode ? 'text-white' : 'text-[#a0a0a0] group-hover:text-black'}`}>Mainkan</span>
               </div>
             </Link>
 
-            {/* Bird Runner */}
-            <Link href="/bird_runner" className="group rounded-3xl bg-[#1c1e1c] text-white p-6 border-2 border-[#2a2d2a] flex flex-col justify-between relative overflow-hidden transition-all hover:-translate-y-1 hover:bg-[#d4ff00] hover:text-black hover:border-[#d4ff00] shadow-[0_8px_0_0_#2a2d2a] hover:shadow-[0_10px_0_0_#9bb800] active:translate-y-[8px] active:shadow-none min-h-[220px]">
+            {/* Heli Runner */}
+            <Link href="/heli_runner" className={`group rounded-3xl p-6 border-2 flex flex-col justify-between relative overflow-hidden transition-all min-h-[220px] ${isLightMode ? 'bg-gradient-to-br from-blue-400 to-blue-600 border-blue-600 text-white shadow-[0_8px_0_0_#1d4ed8] hover:-translate-y-1 hover:shadow-[0_10px_0_0_#1e3a8a] active:translate-y-[8px] active:shadow-none' : 'bg-[#1c1e1c] text-white border-[#2a2d2a] hover:-translate-y-1 hover:bg-[#d4ff00] hover:text-black hover:border-[#d4ff00] shadow-[0_8px_0_0_#2a2d2a] hover:shadow-[0_10px_0_0_#9bb800] active:translate-y-[8px] active:shadow-none'}`}>
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 group-hover:bg-white/20 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none transition-colors"></div>
               <div>
                  <div className="flex justify-between items-start mb-2">
-                   <h3 className="text-2xl font-black uppercase tracking-tight">Bird<br/>Runner</h3>
+                   <h3 className="text-2xl font-black uppercase tracking-tight">Heli<br/>Runner</h3>
                  </div>
-                 <p className="text-[#a0a0a0] group-hover:text-black/60 text-sm font-medium mt-1 transition-colors">Kepakkan sayapmu untuk terbang</p>
+                 <p className={`text-sm font-medium mt-1 transition-colors ${isLightMode ? 'text-blue-100' : 'text-[#a0a0a0] group-hover:text-black/60'}`}>Kepakkan sayapmu untuk terbang</p>
               </div>
               <div className="flex items-center gap-3 mt-auto">
-                 <div className="w-10 h-10 rounded-full bg-white/10 group-hover:bg-black flex items-center justify-center text-white transition-colors"><ArrowRight className="w-5 h-5" /></div>
-                 <span className="font-bold text-sm uppercase text-[#a0a0a0] group-hover:text-black transition-colors">Mainkan</span>
+                 <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${isLightMode ? 'bg-white/20 text-white' : 'bg-white/10 group-hover:bg-black text-white'}`}><ArrowRight className="w-5 h-5" /></div>
+                 <span className={`font-bold text-sm uppercase transition-colors ${isLightMode ? 'text-white' : 'text-[#a0a0a0] group-hover:text-black'}`}>Mainkan</span>
               </div>
             </Link>
 
             {/* Basket Shoot */}
-            <Link href="/basket_shoot" className="group rounded-3xl bg-[#1c1e1c] text-white p-6 border-2 border-[#2a2d2a] flex flex-col justify-between relative overflow-hidden transition-all hover:-translate-y-1 hover:bg-[#d4ff00] hover:text-black hover:border-[#d4ff00] shadow-[0_8px_0_0_#2a2d2a] hover:shadow-[0_10px_0_0_#9bb800] active:translate-y-[8px] active:shadow-none min-h-[220px]">
+            <Link href="/basket_shoot" className={`group rounded-3xl p-6 border-2 flex flex-col justify-between relative overflow-hidden transition-all min-h-[220px] ${isLightMode ? 'bg-gradient-to-br from-orange-400 to-orange-600 border-orange-600 text-white shadow-[0_8px_0_0_#c2410c] hover:-translate-y-1 hover:shadow-[0_10px_0_0_#9a3412] active:translate-y-[8px] active:shadow-none' : 'bg-[#1c1e1c] text-white border-[#2a2d2a] hover:-translate-y-1 hover:bg-[#d4ff00] hover:text-black hover:border-[#d4ff00] shadow-[0_8px_0_0_#2a2d2a] hover:shadow-[0_10px_0_0_#9bb800] active:translate-y-[8px] active:shadow-none'}`}>
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 group-hover:bg-white/20 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none transition-colors"></div>
               <div>
                  <div className="flex justify-between items-start mb-2">
                    <h3 className="text-2xl font-black uppercase tracking-tight">Basket<br/>Shoot</h3>
                  </div>
-                 <p className="text-[#a0a0a0] group-hover:text-black/60 text-sm font-medium mt-1 transition-colors">Lompat dan tembak bola</p>
+                 <p className={`text-sm font-medium mt-1 transition-colors ${isLightMode ? 'text-orange-100' : 'text-[#a0a0a0] group-hover:text-black/60'}`}>Lompat dan tembak bola</p>
               </div>
               <div className="flex items-center gap-3 mt-auto">
-                 <div className="w-10 h-10 rounded-full bg-white/10 group-hover:bg-black flex items-center justify-center text-white transition-colors"><ArrowRight className="w-5 h-5" /></div>
-                 <span className="font-bold text-sm uppercase text-[#a0a0a0] group-hover:text-black transition-colors">Mainkan</span>
+                 <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${isLightMode ? 'bg-white/20 text-white' : 'bg-white/10 group-hover:bg-black text-white'}`}><ArrowRight className="w-5 h-5" /></div>
+                 <span className={`font-bold text-sm uppercase transition-colors ${isLightMode ? 'text-white' : 'text-[#a0a0a0] group-hover:text-black'}`}>Mainkan</span>
               </div>
             </Link>
 
@@ -143,21 +175,21 @@ export default function Home() {
           <div className="mt-12">
             <div className="flex justify-between items-end mb-4">
               <h3 className="text-lg font-bold">Rekor Tertinggi</h3>
-              <Link href="/score_log" className="text-[#a0a0a0] text-xs cursor-pointer hover:text-white">Lihat Papan Peringkat</Link>
+              <Link href="/score_log" className={`text-xs cursor-pointer ${isLightMode ? 'text-indigo-600 hover:text-indigo-800 font-bold' : 'text-[#a0a0a0] hover:text-white'}`}>Lihat Papan Peringkat</Link>
             </div>
             
             <Link 
                href="/score_log"
-               className="block rounded-3xl bg-[#1c1e1c] text-white border-2 border-[#2a2d2a] p-5 flex items-center justify-between cursor-pointer hover:-translate-y-1 hover:border-[#d4ff00] hover:shadow-[0_8px_0_0_#9bb800] hover:bg-[#d4ff00] hover:text-black group transition-all shadow-[0_6px_0_0_#2a2d2a] active:translate-y-[6px] active:shadow-none"
+               className={`block rounded-3xl border-2 p-5 flex items-center justify-between cursor-pointer group transition-all active:translate-y-[6px] active:shadow-none ${isLightMode ? 'bg-white text-slate-800 border-slate-200 hover:border-yellow-400 hover:shadow-[0_8px_0_0_#facc15] shadow-[0_6px_0_0_#e2e8f0]' : 'bg-[#1c1e1c] text-white border-[#2a2d2a] hover:-translate-y-1 hover:border-[#d4ff00] hover:shadow-[0_8px_0_0_#9bb800] hover:bg-[#d4ff00] hover:text-black shadow-[0_6px_0_0_#2a2d2a]'}`}
             >
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-yellow-500/10 group-hover:bg-black/10 flex items-center justify-center text-yellow-500 group-hover:text-black transition-colors"><Trophy className="w-6 h-6" /></div>
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${isLightMode ? 'bg-yellow-100 text-yellow-600 group-hover:bg-yellow-400 group-hover:text-white' : 'bg-yellow-500/10 group-hover:bg-black/10 text-yellow-500 group-hover:text-black'}`}><Trophy className="w-6 h-6" /></div>
                 <div>
                   <p className="font-bold">Papan Peringkat Global</p>
-                  <p className="text-[#a0a0a0] group-hover:text-black/70 text-xs mt-1 transition-colors">Lihat rekor terbaik di semua mode</p>
+                  <p className={`text-xs mt-1 transition-colors ${isLightMode ? 'text-slate-500 group-hover:text-slate-700' : 'text-[#a0a0a0] group-hover:text-black/70'}`}>Lihat rekor terbaik di semua mode</p>
                 </div>
               </div>
-              <div className="text-[#a0a0a0] group-hover:text-black transition-colors"><ArrowRight className="w-5 h-5" /></div>
+              <div className={`transition-colors ${isLightMode ? 'text-slate-400 group-hover:text-yellow-500' : 'text-[#a0a0a0] group-hover:text-black'}`}><ArrowRight className="w-5 h-5" /></div>
             </Link>
           </div>
 
@@ -224,11 +256,11 @@ export default function Home() {
                    </div>
                 </div>
 
-                {/* Bird Runner */}
+                {/* Heli Runner */}
                 <div>
-                   <h3 className="text-sm font-bold text-white mb-3 uppercase tracking-wider">Bird Runner</h3>
+                   <h3 className="text-sm font-bold text-white mb-3 uppercase tracking-wider">Heli Runner</h3>
                    <div className="space-y-2">
-                     {birdLeaderboard.length > 0 ? birdLeaderboard.map((entry, idx) => (
+                     {heliLeaderboard.length > 0 ? heliLeaderboard.map((entry, idx) => (
                        <div key={idx} className="flex justify-between items-center bg-black/30 border border-white/5 p-3 rounded-xl">
                           <div className="flex items-center gap-2">
                             <span className="text-xs text-[#a0a0a0] w-4 shrink-0">#{idx+1}</span>

@@ -30,7 +30,7 @@ export async function saveGameScore(playerName: string, gameType: string, score:
 
     if (existingData && existingData.length > 0) {
       const record = existingData[0];
-      
+
       // 2. Hanya update jika skor baru LEBIH TINGGI dari rekor sebelumnya
       if (score > record.score) {
         const { data, error } = await supabaseServer
@@ -130,9 +130,9 @@ export async function getTopScoresByGame(gameType: string, limit = 5) {
 }
 
 export async function getLeaderboards() {
-  const [endless, bird, basket] = await Promise.all([
+  const [endless, heli, basket] = await Promise.all([
     getTopScoresByGame('endless_runner'),
-    getTopScoresByGame('bird_runner'),
+    getTopScoresByGame('heli_runner'),
     getTopScoresByGame('basket_shoot')
   ]);
 
@@ -140,7 +140,7 @@ export async function getLeaderboards() {
     success: true,
     data: {
       endless: endless.success ? endless.data : [],
-      bird: bird.success ? bird.data : [],
+      heli: heli.success ? heli.data : [],
       basket: basket.success ? basket.data : []
     }
   };

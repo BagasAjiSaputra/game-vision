@@ -2,7 +2,7 @@
 
 import { useRef, useState, useEffect, useMemo } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useGLTF, Environment, Box, useAnimations, Html, Clone } from "@react-three/drei";
+import { useGLTF, Environment, Box, useAnimations, Html, Clone, CameraShake } from "@react-three/drei";
 import * as THREE from "three";
 import { PoseState } from "./PoseController";
 
@@ -357,6 +357,7 @@ function Obstacle({
   speed,
   onRemove,
   onHitPlayer,
+  onPass,
   playerPos,
   isSliding,
 }: {
@@ -366,11 +367,13 @@ function Obstacle({
   speed: number;
   onRemove: () => void;
   onHitPlayer: (type: ObstacleType) => void;
+  onPass: () => void;
   playerPos: THREE.Vector3;
   isSliding: boolean;
 }) {
   const ref = useRef<THREE.Group>(null);
   const hitTriggered = useRef(false);
+  const passedTriggered = useRef(false);
 
   useFrame((state, delta) => {
     if (!ref.current) return;
@@ -407,11 +410,35 @@ function Obstacle({
         onHitPlayer(type);
       }
     }
+
+    if (obZ > playerPos.z + 1.0 && !hitTriggered.current && !passedTriggered.current) {
+      passedTriggered.current = true;
+      onPass();
+    }
   });
 
   return (
     <group ref={ref} position={[lane * LANE_WIDTH, 0, z]}>
       
+
+      {type === "low" && (
+        /* Low Yellow Hurdle */
+        <group position={[0, 0.6, 0]}>
+          <mesh position={[0, 0, 0]}>
+            <boxGeometry args={[2.4, 0.6, 0.3]} />
+            <meshStandardMaterial color="#eab308" roughness={0.4} emissive="#a16207" emissiveIntensity={0.2} />
+          </mesh>
+          {/* Side support posts */}
+          <mesh position={[-1.1, -0.4, 0]}>
+            <cylinderGeometry args={[0.08, 0.08, 0.8, 12]} />
+            <meshStandardMaterial color="#374151" metalness={0.8} />
+          </mesh>
+          <mesh position={[1.1, -0.4, 0]}>
+            <cylinderGeometry args={[0.08, 0.08, 0.8, 12]} />
+            <meshStandardMaterial color="#374151" metalness={0.8} />
+          </mesh>
+        </group>
+      )}
 
       {type === "high" && (
         /* High Overhead Barricade Signboard */
@@ -432,6 +459,20 @@ function Obstacle({
         </group>
       )}
 
+      {type === "full" && (
+        /* Full Roadblock (Must change lane) */
+        <group position={[0, 1.25, 0]}>
+          <mesh position={[0, 0, 0]}>
+            <boxGeometry args={[2.4, 2.5, 0.4]} />
+            <meshStandardMaterial color="#f97316" roughness={0.5} emissive="#c2410c" emissiveIntensity={0.2} />
+          </mesh>
+          {/* Warning stripes */}
+          <mesh position={[0, 0, 0.21]}>
+            <planeGeometry args={[2.2, 0.6]} />
+            <meshStandardMaterial color="#000000" roughness={0.8} />
+          </mesh>
+        </group>
+      )}
 
     </group>
   );
@@ -782,6 +823,7 @@ export default function Game({
   const [coins, setCoins] = useState<CoinData[]>([]);
   
   const [playerPos, setPlayerPos] = useState<THREE.Vector3>(new THREE.Vector3(0, 0, 0));
+  const [shake, setShake] = useState(false);
 
   
   const scoreRef = useRef(0);
@@ -814,15 +856,13 @@ export default function Game({
     const spawnInterval = setInterval(() => {
       if (!isWalking) return;
 
-      // Update distance score
-      scoreRef.current += 15;
-      onScoreUpdate(scoreRef.current);
-
       // Spawn Obstacles
+      let spawnedObstacleLane: number | null = null;
       if (Math.random() > 0.25) {
-        const types: ObstacleType[] = ["high"];
+        const types: ObstacleType[] = ["low", "high", "full"];
         const randomType = types[Math.floor(Math.random() * types.length)];
         const randomLane = Math.floor(Math.random() * 3) - 1;
+        spawnedObstacleLane = randomLane;
 
         setObstacles((prev) => [
           ...prev,
@@ -831,7 +871,15 @@ export default function Game({
       }
 
       // Spawn Coins
-      const coinLane = Math.floor(Math.random() * 3) - 1;
+      let coinLane = Math.floor(Math.random() * 3) - 1;
+      
+      // Ensure coins don't spawn in the same lane as the obstacle
+      if (spawnedObstacleLane !== null) {
+        while (coinLane === spawnedObstacleLane) {
+          coinLane = Math.floor(Math.random() * 3) - 1;
+        }
+      }
+
       const coinY = 0.6;
       for (let i = 0; i < 3; i++) {
         setCoins((prev) => [
@@ -856,19 +904,24 @@ export default function Game({
 
   
   const handleHitObstacle = (type: ObstacleType) => {
-    // Trigger Game Over on collision
-    let reason = "rintangan";
-    if (type === "high") reason = "palang / papan rambu";
-    if (type === "full") reason = "kendaraan / benda di jalan";
-    if (type === "low") reason = "palang bawah";
-    
-    onGameOver(reason);
+    setShake(true);
+    setTimeout(() => setShake(false), 500);
   };
 
   return (
     <Canvas camera={{ position: [0, 4.5, 6.5], fov: 60 }}>
       <color attach="background" args={["#87ceeb"]} />
       <CustomFPS />
+      {shake && (
+        <CameraShake
+          maxYaw={0.1}
+          maxPitch={0.1}
+          maxRoll={0.1}
+          yawFrequency={15}
+          pitchFrequency={15}
+          rollFrequency={15}
+        />
+      )}
       {/* Fog atmosphere for horizon blending */}
       <fog attach="fog" args={["#87ceeb", 20, 90]} />
 
@@ -897,6 +950,10 @@ export default function Game({
           speed={isWalking ? currentSpeed : 0}
           onRemove={() => setObstacles((prev) => prev.filter((o) => o.id !== obs.id))}
           onHitPlayer={handleHitObstacle}
+          onPass={() => {
+            scoreRef.current += 15;
+            onScoreUpdate(scoreRef.current);
+          }}
           playerPos={playerPos}
           isSliding={isSliding}
         />
