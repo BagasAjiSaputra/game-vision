@@ -167,15 +167,17 @@ export default function BasketShootPage() {
         <div className="absolute top-0 left-0 w-full p-4 z-30 flex flex-col gap-2 pointer-events-none">
           <div className="flex justify-between items-center w-full max-w-7xl mx-auto">
             
-            <div className="flex gap-2 items-center flex-wrap">
-              <div className="bg-[#1c1e1c]/90 backdrop-blur-md px-4 py-3 rounded-full border border-white/5 flex items-center gap-3 shadow-[0_4px_0_0_#2a2d2a]">
-                <div className="w-2 h-2 rounded-full bg-[#f97316] animate-pulse"></div>
-                <span className="text-xs text-[#a0a0a0]">Score</span>
-                <span className="text-lg font-bold text-white">{score}</span>
+            <div className="flex gap-4 items-center">
+              <div className="bg-[#1c1e1c]/90 backdrop-blur-md px-6 py-4 md:px-8 md:py-5 rounded-3xl border border-white/10 flex flex-col items-center gap-1 shadow-2xl">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-[#f97316] animate-pulse"></div>
+                  <span className="text-sm md:text-base font-bold text-gray-400 uppercase tracking-widest">Score</span>
+                </div>
+                <span className="text-4xl md:text-5xl font-black text-white">{score}</span>
               </div>
-              <div className="bg-[#1c1e1c]/90 backdrop-blur-md px-4 py-3 rounded-full border border-white/5 flex items-center gap-3 shadow-[0_4px_0_0_#2a2d2a]">
-                <span className="text-xs text-[#a0a0a0]">Time</span>
-                <span className="text-lg font-bold text-white">{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</span>
+              <div className="bg-[#1c1e1c]/90 backdrop-blur-md px-6 py-4 md:px-8 md:py-5 rounded-3xl border border-white/10 flex flex-col items-center gap-1 shadow-2xl">
+                <span className="text-sm md:text-base font-bold text-gray-400 uppercase tracking-widest">Waktu</span>
+                <span className="text-4xl md:text-5xl font-black text-white">{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</span>
               </div>
             </div>
 
