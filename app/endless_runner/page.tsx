@@ -26,6 +26,7 @@ export default function EndlessRunner() {
 
 
   const [isGameOver, setIsGameOver] = useState(false);
+  const [isFrozen, setIsFrozen] = useState(false);
   const [score, setScore] = useState(0);
   const [coins, setCoins] = useState(0);
   const [timeLeft, setTimeLeft] = useState(300);
@@ -99,6 +100,7 @@ export default function EndlessRunner() {
     if (!playerName.trim() || !playerAge.trim()) return;
     setIsPlaying(true);
     setIsGameOver(false);
+    setIsFrozen(false);
     setIsGameActive(false);
     setScore(0);
     setCoins(0);
@@ -139,14 +141,19 @@ export default function EndlessRunner() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === "Space" && isPlaying && !isGameActive && !isGameOver) {
+      if (e.code === "Space" && isPlaying && !isGameActive && !isGameOver && !isFrozen) {
         e.preventDefault();
         setIsGameActive(true);
+      }
+      if (e.code === "Enter" && isFrozen) {
+        e.preventDefault();
+        setIsFrozen(false);
+        handleGameOver("Waktu Habis");
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isPlaying, isGameActive, isGameOver]);
+  }, [isPlaying, isGameActive, isGameOver, isFrozen]);
 
   useEffect(() => {
     if (isPlaying && isGameActive && !isGameOver) {
@@ -158,12 +165,12 @@ export default function EndlessRunner() {
   }, [isPlaying, isGameActive, isGameOver]);
 
   useEffect(() => {
-    if (isPlaying && isGameActive && !isGameOver) {
+    if (isPlaying && isGameActive && !isGameOver && !isFrozen) {
       if (timeLeft <= 0) {
-        handleGameOver("Waktu Habis");
+        setIsFrozen(true);
       }
     }
-  }, [timeLeft, isPlaying, isGameActive, isGameOver]);
+  }, [timeLeft, isPlaying, isGameActive, isGameOver, isFrozen]);
 
   return (
     <main className={`flex min-h-screen flex-col font-sans transition-colors duration-300 ${isLightMode ? 'bg-slate-50 text-slate-900' : 'bg-[#0a0d0c] text-white'}  overflow-hidden relative font-sans`}>
@@ -358,7 +365,7 @@ export default function EndlessRunner() {
       {/* Game Canvas & MediaPipe Camera Feed */}
       {isPlaying && (
         <>
-          {!isGameActive && !isGameOver && (
+          {!isGameActive && !isGameOver && !isFrozen && (
             <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm pointer-events-none">
               <div className="text-center animate-bounce">
                 <h1 className="text-7xl font-black text-white mb-6 tracking-widest drop-shadow-[0_0_15px_rgba(212,255,0,0.8)]">MULAI</h1>
@@ -366,9 +373,11 @@ export default function EndlessRunner() {
               </div>
             </div>
           )}
+
+
           <div className="absolute inset-0 w-full h-full">
             <Game
-              poseState={isGameActive ? poseState : { ...poseState, isWalking: false, isJumping: false, isSliding: false }}
+              poseState={(isGameActive && !isFrozen) ? poseState : { ...poseState, isWalking: false, isJumping: false, isSliding: false }}
               onGameOver={handleGameOver}
               onScoreUpdate={setScore}
               onCoinsUpdate={setCoins}
