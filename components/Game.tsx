@@ -307,6 +307,10 @@ function CoinItem({
     if (!ref.current) return;
 
     // Movement forward
+    if (!ref.current.userData.initialized) {
+      ref.current.position.set(lane * LANE_WIDTH, y, z);
+      ref.current.userData.initialized = true;
+    }
     ref.current.position.z += speed * delta;
 
     
@@ -328,7 +332,7 @@ function CoinItem({
   });
 
   return (
-    <group ref={ref} position={[lane * LANE_WIDTH, y, z]}>
+    <group ref={ref} userData={{ initialized: false }}>
       <mesh rotation={[Math.PI / 2, 0, 0]}>
         <cylinderGeometry args={[0.35, 0.35, 0.08, 16]} />
         <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.1} emissive="#ffaa00" emissiveIntensity={0.3} />
@@ -377,6 +381,10 @@ function Obstacle({
 
   useFrame((state, delta) => {
     if (!ref.current) return;
+    if (!ref.current.userData.initialized) {
+      ref.current.position.set(lane * LANE_WIDTH, 0, z);
+      ref.current.userData.initialized = true;
+    }
     ref.current.position.z += speed * delta;
 
     if (ref.current.position.z > DESPAWN_Z) {
@@ -418,7 +426,7 @@ function Obstacle({
   });
 
   return (
-    <group ref={ref} position={[lane * LANE_WIDTH, 0, z]}>
+    <group ref={ref} userData={{ initialized: false }}>
       
 
       {type === "low" && (
@@ -664,6 +672,13 @@ function CityScenery({ speed }: { speed: number }) {
   useFrame((state, delta) => {
     if (!groupRef.current) return;
     
+    if (!groupRef.current.userData.initialized) {
+      groupRef.current.children.forEach((grp: any) => {
+         grp.position.set(0, 0, grp.userData.initZ);
+      });
+      groupRef.current.userData.initialized = true;
+    }
+
     let minLeftZ = 1000;
     let minLeftDepth = 0;
     let minRightZ = 1000;
@@ -698,9 +713,9 @@ function CityScenery({ speed }: { speed: number }) {
   });
 
   return (
-    <group ref={groupRef}>
+    <group ref={groupRef} userData={{ initialized: false }}>
       {initBuildings.map((b, i) => (
-        <group key={i} position={[0, 0, b.z]} userData={{ isLeft: b.isLeft, depth: b.depth }}>
+        <group key={i} userData={{ isLeft: b.isLeft, depth: b.depth, initZ: b.z }}>
            <BuildingMesh b={b} windowTex={windowTex} brickTex={brickTex} />
         </group>
       ))}

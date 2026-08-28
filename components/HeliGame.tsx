@@ -181,6 +181,11 @@ function FighterJetObstacle({ lane, z, speed, onRemove, onHitPlayer, onPass, pla
 
   useFrame((state, delta) => {
     if (!group.current) return;
+    if (!group.current.userData.initialized) {
+      group.current.position.set(lane * LANE_WIDTH, -1, z);
+      group.current.userData.initialized = true;
+    }
+    
     // Fighter jets only fly towards the player if the player is moving
     if (speed > 0) {
       group.current.position.z += (speed + 14) * delta;
@@ -219,7 +224,7 @@ function FighterJetObstacle({ lane, z, speed, onRemove, onHitPlayer, onPass, pla
   }, [model]);
 
   return (
-    <group ref={group} position={[lane * LANE_WIDTH, -1, z]}>
+    <group ref={group} userData={{ initialized: false }}>
       {clonedScene ? (
         <primitive object={clonedScene} scale={0.5} rotation={[0, 0, 0]} />
       ) : (
