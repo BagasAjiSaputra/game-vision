@@ -6,6 +6,8 @@ import BasketGame from "@/components/BasketGame";
 import Link from "next/link";
 import { Activity, Volume2, VolumeX, Clock, ArrowDown, ArrowUp, Hand, ArrowLeft, ArrowLeftRight , Sun, Moon} from "lucide-react";
 import { saveGameScore, getTopScoresByGame } from "@/app/actions";
+import { getScoreCategory } from "@/lib/scoreUtils";
+import ReportModal from "@/components/ReportModal";
 
 export interface LeaderboardEntry {
   name: string;
@@ -40,6 +42,8 @@ export default function BasketShootPage() {
   const [isMuted, setIsMuted] = useState(false);
   const [gameOverReason, setGameOverReason] = useState("");
   const [randomSeed, setRandomSeed] = useState("");
+  const [playerSnapshot, setPlayerSnapshot] = useState<string>("");
+  const [showReportModal, setShowReportModal] = useState<boolean>(false);
   
 
   const bgmRef = useRef<HTMLAudioElement | null>(null);
@@ -380,7 +384,74 @@ export default function BasketShootPage() {
               }}
             />
           </div>
-          <BasketPoseController onPoseState={setPoseState} />
+          <BasketPoseController onPoseState={setPoseState} onSnapshot={setPlayerSnapshot} />
+
+          {/* Game Over / Frozen Summary Modal Overlay */}
+          {(isGameOver || isFrozen) && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-6">
+              <div className="bg-slate-900 border-2 border-slate-700 rounded-3xl p-8 max-w-lg w-full text-center text-white shadow-2xl space-y-6">
+                <h2 className="text-3xl font-black uppercase text-orange-400 tracking-wider">PERMAINAN SELESAI</h2>
+                
+                {/* Standardized Score & Category */}
+                <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700 space-y-3">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">SKOR AKHIR (SKALA 0 - 100)</p>
+                  <p className="text-6xl font-black text-white">{Math.min(100, score)} <span className="text-2xl font-bold text-slate-500">/ 100</span></p>
+                  
+                  {(() => {
+                    const cat = getScoreCategory(score);
+                    return (
+                      <div className="pt-2 flex flex-col items-center gap-2">
+                        <span className={`px-5 py-2 rounded-full font-black text-sm text-white bg-gradient-to-r ${cat.gradient} shadow-lg uppercase tracking-wider`}>
+                          Kategori: {cat.label}
+                        </span>
+                        <p className="text-xs text-slate-300 italic px-2">"{cat.description}"</p>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Motion Screenshot Thumbnail */}
+                {playerSnapshot && (
+                  <div className="bg-slate-800 rounded-2xl p-3 border border-slate-700">
+                    <p className="text-xs font-bold text-cyan-400 mb-2 uppercase tracking-wider">Bukti Tangkapan Kamera Gerakan Siswa</p>
+                    <img src={playerSnapshot} alt="Student Snapshot" className="w-full h-36 object-contain rounded-xl bg-black border border-slate-700" />
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    onClick={() => setShowReportModal(true)}
+                    className="flex-1 py-4 px-4 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-sm uppercase tracking-wider shadow-lg transition-all active:scale-95"
+                  >
+                    Unduh Laporan
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsGameOver(false);
+                      setIsFrozen(false);
+                      setIsPlaying(false);
+                    }}
+                    className="flex-1 py-4 px-4 rounded-full bg-slate-700 hover:bg-slate-600 text-white font-black text-sm uppercase tracking-wider transition-all"
+                  >
+                    Kembali
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Report Modal Component */}
+          {showReportModal && (
+            <ReportModal
+              playerName={playerName}
+              playerAge={playerAge}
+              gameType="basket_shoot"
+              score={score}
+              snapshotUrl={playerSnapshot}
+              onClose={() => setShowReportModal(false)}
+            />
+          )}
         </>
       )}
       

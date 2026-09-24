@@ -913,7 +913,7 @@ export default function Game({
     setCoins((prev) => prev.filter((c) => c.id !== id));
     coinsRef.current += 1;
     onCoinsUpdate(coinsRef.current);
-    scoreRef.current += 50;
+    scoreRef.current = Math.min(100, scoreRef.current + 1);
     onScoreUpdate(scoreRef.current);
   };
 
@@ -921,6 +921,8 @@ export default function Game({
   const handleHitObstacle = (type: ObstacleType) => {
     setShake(true);
     setTimeout(() => setShake(false), 500);
+    scoreRef.current = Math.max(0, scoreRef.current - 1);
+    onScoreUpdate(scoreRef.current);
   };
 
   return (
@@ -966,7 +968,7 @@ export default function Game({
           onRemove={() => setObstacles((prev) => prev.filter((o) => o.id !== obs.id))}
           onHitPlayer={handleHitObstacle}
           onPass={() => {
-            scoreRef.current += 15;
+            scoreRef.current = Math.min(100, scoreRef.current + 1);
             onScoreUpdate(scoreRef.current);
           }}
           playerPos={playerPos}

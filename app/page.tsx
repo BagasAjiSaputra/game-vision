@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Activity, RefreshCw, ArrowRight, Trophy, Sun, Moon } from "lucide-react";
 import { getLeaderboards } from "@/app/actions";
+import { getScoreCategory } from "@/lib/scoreUtils";
 
 export interface LeaderboardEntry {
   name: string;
@@ -248,7 +249,10 @@ export default function Home() {
                             <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${entry.name}`} alt="Avatar" className="w-6 h-6 rounded-full bg-black/40 shrink-0" />
                             <span className="font-medium text-sm truncate">{entry.name}</span>
                           </div>
-                          <span className="font-bold text-sm">{entry.score}</span>
+                          <div className="text-right">
+                            <span className="font-bold text-sm block">{entry.score}</span>
+                            <span className="text-[10px] text-emerald-400 font-semibold">{getScoreCategory(entry.score).label}</span>
+                          </div>
                        </div>
                      )) : (
                        <p className="text-[#a0a0a0] text-xs">Belum ada data.</p>
@@ -267,10 +271,13 @@ export default function Home() {
                             <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${entry.name}`} alt="Avatar" className="w-6 h-6 rounded-full bg-black/40 shrink-0" />
                             <span className="font-medium text-sm truncate">{entry.name}</span>
                           </div>
-                          <span className="font-bold text-sm">{entry.score}</span>
+                          <div className="text-right">
+                            <span className="font-bold text-sm block">{entry.score}</span>
+                            <span className="text-[10px] text-blue-400 font-semibold">{getScoreCategory(entry.score).label}</span>
+                          </div>
                        </div>
                      )) : (
-                       <p className="text-[#a0a0a0] text-xs">No data.</p>
+                       <p className="text-[#a0a0a0] text-xs">Belum ada data.</p>
                      )}
                    </div>
                 </div>
@@ -286,10 +293,13 @@ export default function Home() {
                             <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${entry.name}`} alt="Avatar" className="w-6 h-6 rounded-full bg-black/40 shrink-0" />
                             <span className="font-medium text-sm truncate">{entry.name}</span>
                           </div>
-                          <span className="font-bold text-sm">{entry.score}</span>
+                          <div className="text-right">
+                            <span className="font-bold text-sm block">{entry.score}</span>
+                            <span className="text-[10px] text-orange-400 font-semibold">{getScoreCategory(entry.score).label}</span>
+                          </div>
                        </div>
                      )) : (
-                       <p className="text-[#a0a0a0] text-xs">No data.</p>
+                       <p className="text-[#a0a0a0] text-xs">Belum ada data.</p>
                      )}
                    </div>
                 </div>

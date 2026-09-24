@@ -95,7 +95,7 @@ export default function BasketGame({ poseState, onScoreUpdate, onMiss }: BasketG
         const distanceToHoop = Math.abs(throwTargetX.current - hoopX.current);
         if (distanceToHoop < 8) { // Tolerance percentage
           setGameState("scored");
-          localScoreRef.current += 1;
+          localScoreRef.current = Math.min(100, localScoreRef.current + 10);
           setScore(localScoreRef.current);
           onScoreUpdate(localScoreRef.current);
           // Increase speed slightly

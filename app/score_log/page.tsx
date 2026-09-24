@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Trophy, Search, Activity, Calendar, Moon, Sun } from "lucide-react";
 import { getGameScores } from "@/app/actions";
+import { getScoreCategory } from "@/lib/scoreUtils";
 
 interface ScoreLog {
   id: string;
@@ -159,9 +160,19 @@ export default function ScoreLogPage() {
                       })}
                     </div>
                     
-                    <div className="md:col-span-2 flex md:justify-end items-center gap-2">
-                      <Trophy className="w-4 h-4 text-yellow-500 md:hidden" />
-                      <span className={`font-black text-2xl md:text-xl ${isLightMode ? 'text-slate-900' : 'text-white'}`}>{log.score}</span>
+                    <div className="md:col-span-2 flex flex-col md:items-end justify-center">
+                      <div className="flex items-center gap-2">
+                        <Trophy className="w-4 h-4 text-yellow-500 md:hidden" />
+                        <span className={`font-black text-2xl md:text-xl ${isLightMode ? 'text-slate-900' : 'text-white'}`}>{log.score}</span>
+                      </div>
+                      {(() => {
+                        const cat = getScoreCategory(log.score);
+                        return (
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${cat.badgeBg} ${cat.textColor} ${cat.borderColor} uppercase tracking-wider`}>
+                            {cat.label}
+                          </span>
+                        );
+                      })()}
                     </div>
                     
                   </div>

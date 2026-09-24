@@ -10,9 +10,10 @@ export type BasketPoseState = {
 
 interface BasketPoseControllerProps {
   onPoseState: (state: BasketPoseState) => void;
+  onSnapshot?: (snapshot: string) => void;
 }
 
-export default function BasketPoseController({ onPoseState }: BasketPoseControllerProps) {
+export default function BasketPoseController({ onPoseState, onSnapshot }: BasketPoseControllerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -168,6 +169,10 @@ export default function BasketPoseController({ onPoseState }: BasketPoseControll
           if (stateStr !== lastEmittedStateRef.current) {
              onPoseState({ aimX, isJumping, isShooting });
              lastEmittedStateRef.current = stateStr;
+          }
+
+          if (onSnapshot && (isShooting || Math.random() < 0.1)) {
+            onSnapshot(canvasElement.toDataURL("image/png"));
           }
         }
         canvasCtx.restore();

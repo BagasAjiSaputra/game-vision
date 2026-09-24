@@ -371,9 +371,11 @@ export default function HeliGame({ poseState, onGameOver, onScoreUpdate }: {
           onHitPlayer={() => {
             setShake(true);
             setTimeout(() => setShake(false), 500);
+            score.current = Math.max(0, score.current - 1);
+            onScoreUpdate(score.current);
           }}
           onPass={() => {
-            score.current += 10;
+            score.current = Math.min(100, score.current + 1);
             onScoreUpdate(score.current);
           }}
           playerLane={lane}
