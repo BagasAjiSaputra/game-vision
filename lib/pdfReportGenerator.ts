@@ -10,13 +10,34 @@ export interface StudentScoreLog {
   game_type: string;
   raw_score: number;
   score_category: string;
-  game_duration?: number;
-  movement_count?: number;
+  game_duration?: number | string;
+  duration?: number | string;
   screenshot_url?: string;
   disability_category?: string;
-  age?: number;
+  school?: string;
+  age?: number | string;
   tgmd_locomotor_score?: number;
   tgmd_object_control_score?: number;
+}
+
+/**
+ * Helper function to format duration in seconds to readable string
+ * e.g., 90 -> "1 m 30 s", 60 -> "1 Menit", 45 -> "45 Detik"
+ */
+function formatDuration(duration?: number | string): string {
+  if (duration === undefined || duration === null || duration === "" || duration === "-") {
+    return "-";
+  }
+  const num = typeof duration === "number" ? duration : parseInt(String(duration), 10);
+  if (isNaN(num) || num <= 0) {
+    return String(duration);
+  }
+  if (num >= 60) {
+    const mins = Math.floor(num / 60);
+    const secs = num % 60;
+    return secs > 0 ? `${mins} m ${secs} s` : `${mins} Menit`;
+  }
+  return `${num} Detik`;
 }
 
 export async function generateStudentPDFReport(
@@ -35,178 +56,225 @@ export async function generateStudentPDFReport(
 
   const sampleLog = studentLogs[0] || {};
   const age = sampleLog.age ? `${sampleLog.age} Tahun` : "8-10 Tahun (Estimasi)";
-  const disability = sampleLog.disability_category || "Tuna Grahita / Tunagrahita";
+  const school = sampleLog.school || "SLB TUNAS KASIH SURABAYA";
+  const currentDate = new Date().toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 
-  // --- HEADER UNESA FIKK ---
-  doc.setFillColor(15, 32, 67); // Navy UNESA
-  doc.rect(14, 12, 182, 16, "F");
+  const primaryNavy = [15, 32, 67]; // #0f2043 Navy UNESA
+  const accentGold = [217, 119, 6]; // Amber/Gold accent
+
+  // --- HEADER BANNER UNESA FIKK ---
+  doc.setFillColor(primaryNavy[0], primaryNavy[1], primaryNavy[2]);
+  doc.rect(14, 12, 182, 20, "F");
+
+  // Accent Line
+  doc.setFillColor(accentGold[0], accentGold[1], accentGold[2]);
+  doc.rect(14, 32, 182, 1.5, "F");
 
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
-  doc.text("UNIVERSITAS NEGERI SURABAYA - FIKK", 105, 17, { align: "center" });
+  doc.text("UNIVERSITAS NEGERI SURABAYA — FAKULTAS ILMU KEOLAHRAGAN DAN KESEHATAN", 105, 18, { align: "center" });
 
   doc.setFontSize(11);
   doc.text(
-    "Laporan Detail Validasi Game AI Markerless vs TGMD-3 Adaptif",
+    "LAPORAN DETAIL EVALUASI MOTORIK GAME AI MARKERLESS",
     105,
-    23,
+    25,
     { align: "center" }
   );
 
-  let currentY = 33;
+  let currentY = 39;
 
   // Intro text
-  doc.setFontSize(8);
+  doc.setFontSize(8.5);
   doc.setFont("helvetica", "normal");
-  doc.setTextColor(60, 60, 60);
+  doc.setTextColor(50, 50, 50);
   const introText =
-    "Dokumen ini memuat detail penilaian motorik kasar siswa berdisabilitas berdasarkan hasil pengujian Game AI Markerless dan asesmen standar TGMD-3 Adaptif. Laporan mencakup data identitas, perolehan skor game beserta normanya, hasil asesmen TGMD-3, serta bukti visual berupa screenshot tangkapan layar aktivitas game beserta tracking kamera MediaPipe.";
+    "Dokumen ini memuat detail penilaian motorik kasar siswa berdasarkan hasil pengujian Game AI Markerless. Laporan mencakup data identitas anak, perolehan skor game beserta durasi dan normanya, serta bukti visual tangkapan layar aktivitas game dengan tracking kamera MediaPipe.";
   const splitIntro = doc.splitTextToSize(introText, 182);
   doc.text(splitIntro, 14, currentY);
 
-  currentY += splitIntro.length * 4 + 4;
+  currentY += splitIntro.length * 4.2 + 4;
 
   // --- BAGIAN A: IDENTITAS ANAK ---
-  doc.setFontSize(11);
+  doc.setFontSize(10.5);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(15, 32, 67);
+  doc.setTextColor(primaryNavy[0], primaryNavy[1], primaryNavy[2]);
   doc.text("A. Identitas Anak", 14, currentY);
-  currentY += 4;
+  currentY += 3.5;
 
   autoTable(doc, {
     startY: currentY,
     head: [],
     body: [
-      ["Nama", playerName],
+      ["Nama Siswa", playerName],
       ["Usia", age],
-      ["Kategori Disabilitas", disability],
+      ["Sekolah / Instansi", school],
+      ["Tanggal Laporan", currentDate],
     ],
     theme: "plain",
-    styles: { fontSize: 9, cellPadding: 2 },
+    styles: { fontSize: 8.5, cellPadding: 2, textColor: [40, 40, 40] },
     columnStyles: {
-      0: { fontStyle: "bold", cellWidth: 45, fillColor: [240, 243, 248] },
-      1: { cellWidth: 137 },
+      0: { fontStyle: "bold", cellWidth: 45, fillColor: [240, 244, 248] },
+      1: { cellWidth: 137, fillColor: [255, 255, 255] },
     },
   });
 
-  currentY = (doc as any).lastAutoTable.finalY + 8;
+  currentY = (doc as any).lastAutoTable.finalY + 7;
 
   // --- BAGIAN B: SKOR GAME AI MARKERLESS ---
-  doc.setFontSize(11);
+  doc.setFontSize(10.5);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(15, 32, 67);
-  doc.text("B. Skor Game AI Markerless", 14, currentY);
-  currentY += 4;
+  doc.setTextColor(primaryNavy[0], primaryNavy[1], primaryNavy[2]);
+  doc.text("B. Hasil Skor Game AI Markerless", 14, currentY);
+  currentY += 3.5;
 
-  const gameRows = studentLogs.map((log) => [
-    log.game_type,
-    log.score_category || "Kurang",
-    log.raw_score.toString(),
-    log.movement_count?.toString() || "-",
-    log.game_duration ? `${log.game_duration}s` : "-",
-  ]);
+  const gameRows = studentLogs.map((log, index) => {
+    const rawDur = log.game_duration ?? log.duration;
+    return [
+      (index + 1).toString(),
+      log.game_type,
+      log.score_category || "Kurang",
+      `${log.raw_score} / 100`,
+      formatDuration(rawDur),
+    ];
+  });
 
   autoTable(doc, {
     startY: currentY,
-    head: [["Jenis Permainan", "Kategori Motorik", "Skor Raw", "Jumlah Gerakan", "Durasi Main"]],
+    head: [["No", "Jenis Permainan", "Kategori Motorik", "Skor Raw", "Durasi Main"]],
     body: gameRows.length > 0 ? gameRows : [["-", "-", "-", "-", "-"]],
     theme: "grid",
-    headStyles: { fillColor: [15, 32, 67], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8 },
-    styles: { fontSize: 8, cellPadding: 2, halign: "center" },
+    headStyles: {
+      fillColor: [15, 32, 67],
+      textColor: [255, 255, 255],
+      fontStyle: "bold",
+      fontSize: 8.5,
+      halign: "center",
+    },
+    styles: { fontSize: 8.5, cellPadding: 2.5, halign: "center", textColor: [40, 40, 40] },
     columnStyles: {
-      0: { halign: "left" },
+      0: { cellWidth: 12, halign: "center" },
+      1: { halign: "left", cellWidth: 55 },
+      2: { halign: "center", cellWidth: 45 },
+      3: { halign: "center", cellWidth: 35 },
+      4: { halign: "center", cellWidth: 35 },
+    },
+    alternateRowStyles: {
+      fillColor: [248, 250, 252],
     },
   });
 
   currentY = (doc as any).lastAutoTable.finalY + 8;
 
-  // --- BAGIAN C: ASESMEN TGMD-3 ADAPTIF ---
-  doc.setFontSize(11);
+  // --- BAGIAN C: BUKTI SCREENSHOT ACTIVITY & MEDIA PIPE ---
+  doc.setFontSize(10.5);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(15, 32, 67);
-  doc.text("C. Skor TGMD-3 Adaptif & Hasil Evaluasi", 14, currentY);
-  currentY += 4;
-
-  const locomotorScore = sampleLog.tgmd_locomotor_score ?? 35;
-  const objectControlScore = sampleLog.tgmd_object_control_score ?? 38;
-  const totalTgmd = locomotorScore + objectControlScore;
-
-  autoTable(doc, {
-    startY: currentY,
-    head: [["Subtes TGMD-3", "Skor Mentah", "Kategori", "Keterangan"]],
-    body: [
-      ["Lokomotor", locomotorScore.toString(), "Sedang", "Penguasaan gerak berlari & melompat memadai"],
-      ["Kontrol Objek", objectControlScore.toString(), "Bagus", "Koordinasi melempar & menangkap sangat baik"],
-      ["Total Skor TGMD-3 Adaptif", totalTgmd.toString(), "Baik", "Secara keseluruhan memenuhi standar gerak dasar"],
-    ],
-    theme: "grid",
-    headStyles: { fillColor: [15, 32, 67], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8 },
-    styles: { fontSize: 8, cellPadding: 2, halign: "center" },
-    columnStyles: {
-      0: { halign: "left" },
-      3: { halign: "left" },
-    },
-  });
-
-  currentY = (doc as any).lastAutoTable.finalY + 10;
-
-  // --- BAGIAN D: BUKTI SCREENSHOT ACTIVITY & MEDIA PIPE ---
-  // Page break for screenshots to fit properly
-  doc.addPage();
-  currentY = 15;
-
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(15, 32, 67);
-  doc.text("D. Dokumen Tangkapan Layar Game & Kamera MediaPipe", 14, currentY);
+  doc.setTextColor(primaryNavy[0], primaryNavy[1], primaryNavy[2]);
+  doc.text("C. Dokumen Tangkapan Layar Game & Tracking MediaPipe", 14, currentY);
   currentY += 6;
 
   const logsWithScreenshots = studentLogs.filter((l) => l.screenshot_url);
 
   if (logsWithScreenshots.length === 0) {
-    doc.setFontSize(9);
+    doc.setFontSize(8.5);
     doc.setFont("helvetica", "italic");
     doc.setTextColor(100, 100, 100);
-    doc.text("Belum ada screenshot game yang tersimpan untuk siswa ini.", 14, currentY);
+    doc.text("Belum ada tangkapan layar game yang tersimpan untuk siswa ini.", 14, currentY);
   } else {
     for (let i = 0; i < logsWithScreenshots.length; i++) {
       const log = logsWithScreenshots[i];
-      if (currentY > 230) {
+      const rawDur = log.game_duration ?? log.duration;
+      const formattedDur = formatDuration(rawDur);
+
+      // Height of screenshot image box: ~75mm
+      const requiredHeight = 88;
+      if (currentY + requiredHeight > 270) {
         doc.addPage();
-        currentY = 15;
+        currentY = 16;
       }
 
-      doc.setFontSize(9);
+      const dateStr = new Date(log.created_at).toLocaleString("id-ID", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      // Info banner above screenshot
+      doc.setFillColor(240, 244, 248);
+      doc.setDrawColor(200, 210, 225);
+      doc.rect(14, currentY, 182, 7, "FD");
+
+      doc.setFontSize(8);
       doc.setFont("helvetica", "bold");
-      doc.setTextColor(40, 40, 40);
-      const dateStr = new Date(log.created_at).toLocaleString("id-ID");
+      doc.setTextColor(15, 32, 67);
       doc.text(
-        `Game: ${log.game_type} | Skor: ${log.raw_score} (${log.score_category}) | Tanggal: ${dateStr}`,
-        14,
-        currentY
+        `[${i + 1}] Game: ${log.game_type}  |  Skor: ${log.raw_score} (${log.score_category})  |  Durasi Main: ${formattedDur}  |  Waktu: ${dateStr}`,
+        17,
+        currentY + 4.8
       );
-      currentY += 4;
+
+      currentY += 9;
 
       try {
-        // Load image convert to base64 if needed or add directly
         const imgData = await fetchImageAsBase64(log.screenshot_url!);
         if (imgData) {
-          doc.addImage(imgData, "JPEG", 14, currentY, 120, 67.5); // 16:9 aspect ratio
-          currentY += 72;
+          // Draw Border box around image
+          doc.setDrawColor(180, 190, 205);
+          doc.rect(14, currentY, 182, 75, "D");
+          doc.addImage(imgData, "JPEG", 14.5, currentY + 0.5, 181, 74);
+          currentY += 80;
         } else {
           doc.setFontSize(8);
           doc.setFont("helvetica", "italic");
-          doc.text("[Gagal memuat gambar screenshot]", 14, currentY);
-          currentY += 8;
+          doc.setTextColor(120, 120, 120);
+          doc.text("[Gagal memuat gambar tangkapan layar]", 14, currentY + 5);
+          currentY += 12;
         }
       } catch (err) {
         doc.setFontSize(8);
         doc.setFont("helvetica", "italic");
-        doc.text("[Gambar tidak dapat ditampilkan]", 14, currentY);
-        currentY += 8;
+        doc.setTextColor(120, 120, 120);
+        doc.text("[Gambar tangkapan layar tidak dapat ditampilkan]", 14, currentY + 5);
+        currentY += 12;
       }
     }
+  }
+
+  // --- ADD PAGE NUMBERS AND FOOTER TO ALL PAGES ---
+  const pageCount = (doc as any).internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+
+    // Header for Page 2+
+    if (i > 1) {
+      doc.setFontSize(7.5);
+      doc.setFont("helvetica", "italic");
+      doc.setTextColor(120, 120, 120);
+      doc.text(`Laporan Detail Evaluasi Motorik Siswa: ${playerName}`, 14, 10);
+      doc.setDrawColor(220, 220, 220);
+      doc.line(14, 11.5, 196, 11.5);
+    }
+
+    // Footer on all pages
+    doc.setFontSize(7.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(120, 120, 120);
+    doc.setDrawColor(220, 220, 220);
+    doc.line(14, 284, 196, 284);
+
+    doc.text(
+      "Dokumen Resmi Evaluasi Motorik Game AI Markerless — RuangRobot & UNESA FIKK",
+      14,
+      288
+    );
+    doc.text(`Halaman ${i} dari ${pageCount}`, 196, 288, { align: "right" });
   }
 
   // Save the generated PDF
