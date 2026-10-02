@@ -4,10 +4,11 @@ import { useState, useEffect, useRef } from "react";
 import HeliGame from "@/components/HeliGame";
 import HeliPoseController, { HeliPoseState } from "@/components/HeliPoseController";
 import Link from "next/link";
-import { Activity, Volume2, VolumeX, AlertTriangle, Hand, ArrowLeft , Sun, Moon} from "lucide-react";
-import { saveGameScore, getTopScoresByGame } from "@/app/actions";
-import { getScoreCategory } from "@/lib/scoreUtils";
-import ReportModal from "@/components/ReportModal";
+import { useRouter } from "next/navigation";
+import { Activity, Volume2, VolumeX, AlertTriangle, Hand, ArrowLeft , Sun, Moon, CheckCircle, Loader2 } from "lucide-react";
+import { saveGameScore, getTopScoresByGame, uploadScreenshotAndUpdateScore } from "@/app/actions";
+import { getStoredTeacher } from "@/lib/teacherAuth";
+import { captureGameScreenshot } from "@/lib/screenshotCapture";
 
 export interface LeaderboardEntry {
   name: string;
@@ -16,6 +17,7 @@ export interface LeaderboardEntry {
 }
 
 export default function HeliRunner() {
+  const router = useRouter();
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLightMode, setIsLightMode] = useState(true);
 
@@ -93,6 +95,8 @@ export default function HeliRunner() {
     fetchLeaderboard();
   }, []);
 
+  const scoreRef = useRef(0);
+
   const startGame = () => {
     if (!playerName.trim() || !playerAge.trim()) return;
     setIsPlaying(true);
@@ -101,6 +105,7 @@ export default function HeliRunner() {
     setIsGameActive(false);
     setGameOverReason("");
     setScore(0);
+    scoreRef.current = 0;
     const savedTime = localStorage.getItem('gameDuration');
     setTimeLeft(savedTime ? parseInt(savedTime) : 300);
     setHasStartedPlaying(false);
@@ -109,48 +114,70 @@ export default function HeliRunner() {
   const handleGameOver = async (reason?: string) => {
     setIsGameActive(false);
 
+    // 1. Capture screenshot SEBELUM menutup canvas game
+    let screenshotBlob: Blob | null = null;
+    try {
+      screenshotBlob = await captureGameScreenshot();
+    } catch (err) {
+      console.error("Screenshot capture failed:", err);
+    }
 
+    const effectiveName = (playerName && playerName.trim() ? playerName.trim() : "PEMAIN TAMU").substring(0, 20).toUpperCase();
 
-    setIsPlaying(false);
-    setIsGameOver(true);
-    if (reason) setGameOverReason(reason);
-    if (score >= 0 && playerName.trim()) {
-      try {
-        const response = await saveGameScore(
-          playerName.substring(0, 20).toUpperCase(),
-          'heli_runner',
-          score,
-          parseInt(playerAge)
-        );
-        
-        if (!response.success) {
-          console.error("Supabase Insert Error:", response.error);
-          alert("Gagal menyimpan skor ke database: " + response.error);
-        } else {
-          console.log("Skor berhasil disimpan ke Supabase via Server Action!");
-          await fetchLeaderboard();
-        }
-      } catch (err) {
-        console.error("Failed to call saveGameScore action", err);
+    // 2. Simpan skor ke database
+    let scoreId: string | null = null;
+    try {
+      const teacher = getStoredTeacher();
+      const playedDuration = 90 - timeLeft;
+      const result = await saveGameScore(
+        effectiveName,
+        'heli_runner',
+        scoreRef.current || score,
+        parseInt(playerAge) || undefined,
+        teacher?.id,
+        teacher?.school_name,
+        undefined,
+        playedDuration
+      );
+      if (result.success && result.data && result.data[0]) {
+        scoreId = result.data[0].id;
       }
+      await fetchLeaderboard();
+    } catch (err) {
+      console.error("Failed to save score:", err);
+    }
+
+    // 3. Kembali ke pre-game menu
+    setIsPlaying(false);
+    setIsGameOver(false);
+    setIsFrozen(false);
+
+    // 4. Upload screenshot secara async (tidak blocking UI)
+    if (screenshotBlob && scoreId) {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64 = reader.result as string;
+        try {
+          await uploadScreenshotAndUpdateScore(scoreId!, base64, 'heli_runner', effectiveName);
+          console.log('[Screenshot] Upload berhasil untuk skor:', scoreId);
+        } catch (err) {
+          console.error('[Screenshot] Upload gagal:', err);
+        }
+      };
+      reader.readAsDataURL(screenshotBlob);
     }
   };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === "Space" && isPlaying && !isGameActive && !isGameOver && !isFrozen) {
+      if (e.code === "Space" && isPlaying && !isGameActive && !isGameOver) {
         e.preventDefault();
         setIsGameActive(true);
-      }
-      if (e.code === "Enter" && isFrozen) {
-        e.preventDefault();
-        setIsFrozen(false);
-        handleGameOver("Waktu Habis");
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isPlaying, isGameActive, isGameOver, isFrozen]);
+  }, [isPlaying, isGameActive, isGameOver]);
 
   useEffect(() => {
     if (isPlaying && poseState.isFlying && !hasStartedPlaying) {
@@ -160,20 +187,16 @@ export default function HeliRunner() {
 
   useEffect(() => {
     if (isPlaying && isGameActive && !isGameOver) {
+      if (timeLeft <= 0) {
+        handleGameOver("Waktu Habis");
+        return;
+      }
       const timer = setInterval(() => {
         setTimeLeft(prev => Math.max(0, prev - 1));
       }, 1000);
       return () => clearInterval(timer);
     }
-  }, [isPlaying, isGameActive, isGameOver, hasStartedPlaying]);
-
-  useEffect(() => {
-    if (isPlaying && isGameActive && !isGameOver && !isFrozen) {
-      if (timeLeft <= 0) {
-        setIsFrozen(true);
-      }
-    }
-  }, [timeLeft, isPlaying, isGameActive, isGameOver, isFrozen]);
+  }, [isPlaying, isGameActive, isGameOver, timeLeft]);
 
   return (
     <main className={`flex min-h-screen flex-col font-sans transition-colors duration-300 ${isLightMode ? 'bg-slate-50 text-slate-900' : 'bg-[#0a0d0c] text-white'}  overflow-hidden relative font-sans`}>
@@ -207,6 +230,12 @@ export default function HeliRunner() {
                 className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors text-sm"
               >
                 {isMuted ? "🔇" : "🔊"}
+              </button>
+              <button
+                onClick={() => handleGameOver("Selesai")}
+                className="px-3 py-1.5 rounded-full bg-red-600/80 hover:bg-red-600 text-white font-bold text-xs transition-colors flex items-center gap-1 shadow-md"
+              >
+                KEMBALI
               </button>
             </div>
             
@@ -376,77 +405,13 @@ export default function HeliRunner() {
             <HeliGame
               poseState={(isGameActive && !isFrozen) ? poseState : { ...poseState, isFlying: false }}
               onGameOver={handleGameOver}
-              onScoreUpdate={setScore}
+              onScoreUpdate={(s) => {
+                setScore(s);
+                scoreRef.current = s;
+              }}
             />
           </div>
           <HeliPoseController onPoseState={setPoseState} onSnapshot={setPlayerSnapshot} />
-
-          {/* Game Over / Frozen Summary Modal Overlay */}
-          {(isGameOver || isFrozen) && (
-            <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-6">
-              <div className="bg-slate-900 border-2 border-slate-700 rounded-3xl p-8 max-w-lg w-full text-center text-white shadow-2xl space-y-6">
-                <h2 className="text-3xl font-black uppercase text-blue-400 tracking-wider">PERMAINAN SELESAI</h2>
-                
-                {/* Standardized Score & Category */}
-                <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700 space-y-3">
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">SKOR AKHIR (SKALA 0 - 100)</p>
-                  <p className="text-6xl font-black text-white">{Math.min(100, score)} <span className="text-2xl font-bold text-slate-500">/ 100</span></p>
-                  
-                  {(() => {
-                    const cat = getScoreCategory(score);
-                    return (
-                      <div className="pt-2 flex flex-col items-center gap-2">
-                        <span className={`px-5 py-2 rounded-full font-black text-sm text-white bg-gradient-to-r ${cat.gradient} shadow-lg uppercase tracking-wider`}>
-                          Kategori: {cat.label}
-                        </span>
-                        <p className="text-xs text-slate-300 italic px-2">"{cat.description}"</p>
-                      </div>
-                    );
-                  })()}
-                </div>
-
-                {/* Motion Screenshot Thumbnail */}
-                {playerSnapshot && (
-                  <div className="bg-slate-800 rounded-2xl p-3 border border-slate-700">
-                    <p className="text-xs font-bold text-cyan-400 mb-2 uppercase tracking-wider">Bukti Tangkapan Kamera Gerakan Siswa</p>
-                    <img src={playerSnapshot} alt="Student Snapshot" className="w-full h-36 object-contain rounded-xl bg-black border border-slate-700" />
-                  </div>
-                )}
-
-                {/* Action Buttons */}
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <button
-                    onClick={() => setShowReportModal(true)}
-                    className="flex-1 py-4 px-4 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-sm uppercase tracking-wider shadow-lg transition-all active:scale-95"
-                  >
-                    Unduh Laporan
-                  </button>
-                  <button
-                    onClick={() => {
-                      setIsGameOver(false);
-                      setIsFrozen(false);
-                      setIsPlaying(false);
-                    }}
-                    className="flex-1 py-4 px-4 rounded-full bg-slate-700 hover:bg-slate-600 text-white font-black text-sm uppercase tracking-wider transition-all"
-                  >
-                    Kembali
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Report Modal Component */}
-          {showReportModal && (
-            <ReportModal
-              playerName={playerName}
-              playerAge={playerAge}
-              gameType="heli_runner"
-              score={score}
-              snapshotUrl={playerSnapshot}
-              onClose={() => setShowReportModal(false)}
-            />
-          )}
         </>
       )}
       

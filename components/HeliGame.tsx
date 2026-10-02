@@ -309,14 +309,18 @@ export default function HeliGame({ poseState, onGameOver, onScoreUpdate }: {
     }
   }, [isFlying, hasStarted]);
 
-  // Game Loop (Spawning & Scoring)
+  // Game Loop (Spawning & Scoring berkala)
   useEffect(() => {
     if (!hasStarted) return;
 
     const interval = setInterval(() => {
       if (!isFlying) return;
 
-      // Spawn new obstacle (Flamingo)
+      // Tambah skor berkala seiring waktu terbang bersih (+2 poin tiap 1.2 detik)
+      score.current = Math.min(100, score.current + 2);
+      onScoreUpdate(score.current);
+
+      // Spawn new obstacle (Jet)
       const randomLane = Math.floor(Math.random() * 3) - 1; // -1, 0, or 1
       setObstacles((prev) => [
         ...prev,
@@ -332,7 +336,7 @@ export default function HeliGame({ poseState, onGameOver, onScoreUpdate }: {
   };
 
   return (
-    <Canvas camera={{ position: [0, 5, 8], fov: 60 }}>
+    <Canvas camera={{ position: [0, 5, 8], fov: 60 }} gl={{ preserveDrawingBuffer: true }}>
       <CustomFPS />
       {shake && (
         <CameraShake
@@ -371,11 +375,13 @@ export default function HeliGame({ poseState, onGameOver, onScoreUpdate }: {
           onHitPlayer={() => {
             setShake(true);
             setTimeout(() => setShake(false), 500);
-            score.current = Math.max(0, score.current - 1);
+            // Penalti menabrak rintangan
+            score.current = Math.max(0, score.current - 8);
             onScoreUpdate(score.current);
           }}
           onPass={() => {
-            score.current = Math.min(100, score.current + 1);
+            // Berhasil melewati rintangan tanpa menabrak
+            score.current = Math.min(100, score.current + 5);
             onScoreUpdate(score.current);
           }}
           playerLane={lane}
