@@ -169,20 +169,20 @@ export default function ScoreLogPage() {
   };
 
   return (
-    <main className={`flex min-h-screen flex-col overflow-hidden relative font-sans ${isLightMode ? 'bg-slate-50 text-slate-900' : 'bg-[#0a0d0c] text-white'}`}>
-      <div className="z-20 w-full mx-auto px-6 py-12 md:px-12 md:py-16 flex flex-col h-full">
+    <main className={`flex min-h-screen flex-col font-sans ${isLightMode ? 'bg-slate-50 text-slate-900' : 'bg-[#0a0d0c] text-white'}`}>
+      <div className="w-full mx-auto px-4 py-6 md:px-12 md:py-16 flex flex-col min-h-screen">
         
         {/* Header */}
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-12">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8 md:mb-12">
           <div className="flex items-center gap-4">
-            <Link href="/" className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors border ${isLightMode ? 'bg-white text-slate-500 border-slate-200 hover:border-slate-400 hover:text-slate-900 shadow-sm' : 'bg-[#1c1e1c] text-[#a0a0a0] border-white/5 hover:border-white/50 hover:text-white'}`}>
-              <ArrowLeft className="w-6 h-6" />
+            <Link href="/" className={`w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center transition-colors border ${isLightMode ? 'bg-white text-slate-500 border-slate-200 hover:border-slate-400 hover:text-slate-900 shadow-sm' : 'bg-[#1c1e1c] text-[#a0a0a0] border-white/5 hover:border-white/50 hover:text-white'}`}>
+              <ArrowLeft className="w-5 h-5 md:w-6 md:h-6" />
             </Link>
             <div>
-              <p className={`text-sm ${isLightMode ? 'text-slate-500' : 'text-[#a0a0a0]'}`}>
+              <p className={`text-xs md:text-sm ${isLightMode ? 'text-slate-500' : 'text-[#a0a0a0]'}`}>
                 {teacher ? `Guru: ${teacher.name} (${teacher.school_name})` : 'Dashboard Data'}
               </p>
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-3">
+              <h1 className="text-xl md:text-3xl font-bold tracking-tight flex items-center gap-3">
                 Log Skor Permainan
                 {teacher && (
                   <span className="text-xs px-3 py-1 rounded-full bg-indigo-500/15 text-indigo-600 border border-indigo-500/30 font-semibold flex items-center gap-1">
@@ -198,7 +198,7 @@ export default function ScoreLogPage() {
             <button 
               onClick={handleExportCSV} 
               title="Unduh Data Skor Format CSV (Excel)"
-              className={`px-5 py-3 rounded-full border-2 flex items-center gap-2 transition-all active:translate-y-[2px] font-bold text-xs uppercase tracking-wider ${
+              className={`px-4 py-2.5 md:px-5 md:py-3 rounded-full border-2 flex items-center gap-2 transition-all active:translate-y-[2px] font-bold text-xs uppercase tracking-wider ${
                 isLightMode 
                   ? 'bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700 shadow-sm' 
                   : 'bg-emerald-500 text-black border-emerald-500 hover:bg-emerald-400'
@@ -236,7 +236,7 @@ export default function ScoreLogPage() {
                 await generateStudentPDFReport(firstPlayer, pdfLogs);
               }} 
               title="Unduh Laporan Format PDF (Lengkap Screenshot)"
-              className={`px-5 py-3 rounded-full border-2 flex items-center gap-2 transition-all active:translate-y-[2px] font-bold text-xs uppercase tracking-wider ${
+              className={`px-4 py-2.5 md:px-5 md:py-3 rounded-full border-2 flex items-center gap-2 transition-all active:translate-y-[2px] font-bold text-xs uppercase tracking-wider ${
                 isLightMode 
                   ? 'bg-rose-600 text-white border-rose-600 hover:bg-rose-700 shadow-sm' 
                   : 'bg-rose-500 text-black border-rose-500 hover:bg-rose-400'
@@ -247,24 +247,24 @@ export default function ScoreLogPage() {
 
             <button 
               onClick={() => { const next = !isLightMode; setIsLightMode(next); localStorage.setItem('isLightMode', String(next)); }} 
-              className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${isLightMode ? 'bg-white text-slate-700 shadow-sm hover:bg-slate-100 border border-slate-200' : 'bg-[#1c1e1c] text-[#a0a0a0] hover:text-white border border-white/5'}`}
+              className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center transition-colors ${isLightMode ? 'bg-white text-slate-700 shadow-sm hover:bg-slate-100 border border-slate-200' : 'bg-[#1c1e1c] text-[#a0a0a0] hover:text-white border border-white/5'}`}
             >
-              {isLightMode ? <Moon className="w-6 h-6" /> : <Sun className="w-6 h-6" />}
+              {isLightMode ? <Moon className="w-5 h-5 md:w-6 md:h-6" /> : <Sun className="w-5 h-5 md:w-6 md:h-6" />}
             </button>
-            <button onClick={fetchLogs} className={`px-5 py-3 rounded-full border-2 flex items-center gap-2 transition-all active:translate-y-[2px] font-bold text-xs uppercase tracking-wider ${isLightMode ? 'bg-white border-slate-200 text-slate-700 shadow-sm hover:bg-slate-50' : 'bg-[#1c1e1c] border-[#2a2d2a] hover:bg-[#2a2d2a]'}`}>
+            <button onClick={fetchLogs} className={`px-4 py-2.5 md:px-5 md:py-3 rounded-full border-2 flex items-center gap-2 transition-all active:translate-y-[2px] font-bold text-xs uppercase tracking-wider ${isLightMode ? 'bg-white border-slate-200 text-slate-700 shadow-sm hover:bg-slate-50' : 'bg-[#1c1e1c] border-[#2a2d2a] hover:bg-[#2a2d2a]'}`}>
               <Activity className="w-4 h-4" /> REFRESH
             </button>
           </div>
         </div>
 
         {/* Filters */}
-        <div className={`p-6 rounded-3xl border mb-8 flex flex-col gap-6 ${isLightMode ? 'bg-white border-slate-200 shadow-sm' : 'bg-[#1c1e1c] border-white/5'}`}>
+        <div className={`p-4 md:p-6 rounded-3xl border mb-6 md:mb-8 flex flex-col gap-4 md:gap-6 ${isLightMode ? 'bg-white border-slate-200 shadow-sm' : 'bg-[#1c1e1c] border-white/5'}`}>
           
           {teacher && (
             <div className={`flex items-center p-1 rounded-2xl border w-fit ${isLightMode ? 'bg-slate-100 border-slate-200' : 'bg-[#0a0d0c] border-white/10'}`}>
               <button
                 onClick={() => setFilterMode("all")}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                className={`px-3 py-1.5 md:px-4 md:py-2 rounded-xl text-xs font-bold transition-all ${
                   filterMode === "all"
                     ? (isLightMode ? "bg-white text-slate-900 shadow-sm" : "bg-[#1c1e1c] text-white shadow-sm")
                     : "text-gray-500 hover:text-gray-800"
@@ -274,7 +274,7 @@ export default function ScoreLogPage() {
               </button>
               <button
                 onClick={() => setFilterMode("my_students")}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 md:px-4 md:py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                   filterMode === "my_students"
                     ? (isLightMode ? "bg-indigo-600 text-white shadow-sm" : "bg-[#d4ff00] text-black shadow-sm")
                     : "text-gray-500 hover:text-gray-800"
@@ -285,7 +285,7 @@ export default function ScoreLogPage() {
             </div>
           )}
 
-          <div className="flex flex-col md:flex-row gap-6 items-center">
+          <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-center">
             <div className="flex-1 w-full relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
               <input 
@@ -293,15 +293,15 @@ export default function ScoreLogPage() {
                 placeholder="Cari nama pemain..." 
                 value={searchName}
                 onChange={(e) => setSearchName(e.target.value)}
-                className={`w-full border rounded-full py-4 pl-12 pr-6 focus:outline-none transition-colors ${isLightMode ? 'bg-slate-50 border-slate-200 text-slate-900 focus:border-slate-400' : 'bg-[#0a0d0c] border-white/10 text-white focus:border-white/30'}`}
+                className={`w-full border rounded-full py-3.5 pl-12 pr-6 text-sm focus:outline-none transition-colors ${isLightMode ? 'bg-slate-50 border-slate-200 text-slate-900 focus:border-slate-400' : 'bg-[#0a0d0c] border-white/10 text-white focus:border-white/30'}`}
               />
             </div>
-            <div className="flex gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 hide-scrollbar">
+            <div className="flex gap-2 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 hide-scrollbar shrink-0">
               {['all', 'endless_runner', 'heli_runner', 'basket_shoot'].map(filter => (
                 <button 
                   key={filter}
                   onClick={() => setFilterGame(filter)}
-                  className={`px-6 py-3 rounded-full font-bold text-sm whitespace-nowrap transition-colors border ${filterGame === filter ? (isLightMode ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-black border-white') : (isLightMode ? 'bg-white text-slate-600 border-slate-200 hover:border-slate-300' : 'bg-[#0a0d0c] text-[#a0a0a0] border-white/10 hover:border-white/30')}`}
+                  className={`px-5 py-2.5 md:px-6 md:py-3 rounded-full font-bold text-xs md:text-sm whitespace-nowrap transition-colors border shrink-0 ${filterGame === filter ? (isLightMode ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-black border-white') : (isLightMode ? 'bg-white text-slate-600 border-slate-200 hover:border-slate-300' : 'bg-[#0a0d0c] text-[#a0a0a0] border-white/10 hover:border-white/30')}`}
                 >
                   {filter === 'all' ? 'Semua Game' : getGameName(filter)}
                 </button>
@@ -311,7 +311,7 @@ export default function ScoreLogPage() {
         </div>
 
         {/* Data Table / List */}
-        <div className={`flex-1 rounded-3xl border overflow-hidden flex flex-col ${isLightMode ? 'bg-white border-slate-200 shadow-sm' : 'bg-[#1c1e1c] border-white/5'}`}>
+        <div className={`rounded-3xl border ${isLightMode ? 'bg-white border-slate-200 shadow-sm' : 'bg-[#1c1e1c] border-white/5'}`}>
           <div className={`grid grid-cols-12 gap-4 p-6 border-b font-bold text-xs uppercase tracking-wider hidden md:grid ${isLightMode ? 'border-slate-200 text-slate-500' : 'border-white/5 text-[#a0a0a0]'}`}>
             <div className="col-span-4">Pemain / Murid</div>
             <div className="col-span-3">Permainan & Sekolah</div>
@@ -319,7 +319,7 @@ export default function ScoreLogPage() {
             <div className="col-span-2 text-right">Skor</div>
           </div>
           
-          <div className="flex-1 overflow-y-auto p-4 md:p-0">
+          <div className="p-4 md:p-6">
             {loading ? (
               <div className="flex justify-center items-center h-40">
                 <div className={`animate-spin rounded-full h-8 w-8 border-t-2 ${isLightMode ? 'border-slate-900' : 'border-white'}`}></div>
