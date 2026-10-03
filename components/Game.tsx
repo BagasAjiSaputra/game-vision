@@ -856,24 +856,24 @@ export default function Game({
   
   const [currentSpeed, setCurrentSpeed] = useState(INITIAL_FORWARD_SPEED);
 
-  // Speed acceleration over time
+  // Speed acceleration over time (Capped at 18 to prevent speed-clipping obstacles)
   useEffect(() => {
-    if (!isWalking) return;
     const accelInterval = setInterval(() => {
-      setCurrentSpeed((prev) => Math.min(24, prev + 0.15));
+      setCurrentSpeed((prev) => Math.min(18, prev + 0.1));
     }, 1000);
     return () => clearInterval(accelInterval);
-  }, [isWalking]);
+  }, []);
 
-  
-  // Game Loop (Spawning & Scoring)
+  // Game Loop (Spawning & Scoring berkala - runs continuously for the full game duration)
   useEffect(() => {
     const spawnInterval = setInterval(() => {
-      if (!isWalking) return;
+      // Poin berkala seiring waktu berlari (+2 poin tiap 1.4 detik)
+      scoreRef.current = Math.min(100, scoreRef.current + 2);
+      onScoreUpdate(scoreRef.current);
 
-      // Spawn Obstacles
+      // Spawn Obstacles (selalu bermunculan secara konstan hingga akhir game)
       let spawnedObstacleLane: number | null = null;
-      if (Math.random() > 0.25) {
+      if (Math.random() > 0.15) {
         const types: ObstacleType[] = ["low", "high", "full"];
         const randomType = types[Math.floor(Math.random() * types.length)];
         const randomLane = Math.floor(Math.random() * 3) - 1;
@@ -888,7 +888,6 @@ export default function Game({
       // Spawn Coins
       let coinLane = Math.floor(Math.random() * 3) - 1;
       
-      // Ensure coins don't spawn in the same lane as the obstacle
       if (spawnedObstacleLane !== null) {
         while (coinLane === spawnedObstacleLane) {
           coinLane = Math.floor(Math.random() * 3) - 1;
@@ -903,28 +902,34 @@ export default function Game({
         ]);
       }
 
-
     }, 1400);
 
     return () => clearInterval(spawnInterval);
-  }, [isWalking, onScoreUpdate]);
+  }, []);
 
   const handleCollectCoin = (id: number) => {
     setCoins((prev) => prev.filter((c) => c.id !== id));
     coinsRef.current += 1;
     onCoinsUpdate(coinsRef.current);
-    scoreRef.current += 50;
+    scoreRef.current = Math.min(100, scoreRef.current + 2);
     onScoreUpdate(scoreRef.current);
   };
 
-  
   const handleHitObstacle = (type: ObstacleType) => {
     setShake(true);
     setTimeout(() => setShake(false), 500);
+    scoreRef.current = Math.max(0, scoreRef.current - 10);
+    onScoreUpdate(scoreRef.current);
+  };
+
+  const handlePassObstacle = () => {
+    // Poin bonus saat berhasil melompati / menunduk / menghindari halangan
+    scoreRef.current = Math.min(100, scoreRef.current + 4);
+    onScoreUpdate(scoreRef.current);
   };
 
   return (
-    <Canvas camera={{ position: [0, 4.5, 6.5], fov: 60 }}>
+    <Canvas camera={{ position: [0, 4.5, 6.5], fov: 60 }} gl={{ preserveDrawingBuffer: true }}>
       <color attach="background" args={["#87ceeb"]} />
       <CustomFPS />
       {shake && (
@@ -962,13 +967,10 @@ export default function Game({
           type={obs.type}
           lane={obs.lane}
           z={obs.z}
-          speed={isWalking ? currentSpeed : 0}
+          speed={currentSpeed}
           onRemove={() => setObstacles((prev) => prev.filter((o) => o.id !== obs.id))}
           onHitPlayer={handleHitObstacle}
-          onPass={() => {
-            scoreRef.current += 15;
-            onScoreUpdate(scoreRef.current);
-          }}
+          onPass={handlePassObstacle}
           playerPos={playerPos}
           isSliding={isSliding}
         />

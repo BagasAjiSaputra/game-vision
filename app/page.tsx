@@ -3,8 +3,11 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Activity, RefreshCw, ArrowRight, Trophy, Sun, Moon } from "lucide-react";
+import { Activity, RefreshCw, ArrowRight, Trophy, Sun, Moon, UserCheck, LogOut, ShieldCheck, ClipboardList } from "lucide-react";
 import { getLeaderboards } from "@/app/actions";
+import { getScoreCategory } from "@/lib/scoreUtils";
+import { useTeacherAuth } from "@/lib/teacherAuth";
+import TeacherAuthModal from "@/components/TeacherAuthModal";
 
 export interface LeaderboardEntry {
   name: string;
@@ -23,6 +26,9 @@ export default function Home() {
   const [overallLeaderboard, setOverallLeaderboard] = useState<{name: string, average: number}[]>([]);
   
   const [randomSeed, setRandomSeed] = useState("");
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
+  const { teacher, isLoaded, login, logout } = useTeacherAuth();
   
   const router = useRouter();
 
@@ -83,17 +89,80 @@ export default function Home() {
     <main className={`flex min-h-screen flex-col font-sans px-6 py-12 md:px-12 md:py-16 w-full transition-colors duration-300 ${isLightMode ? 'bg-slate-50 text-slate-900' : 'bg-[#0a0d0c] text-white'}`}>
       
       {/* Top Header */}
-      <div className="flex justify-between items-center mb-10">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 border-2 border-[#1c1e1c] flex items-center justify-center overflow-hidden shrink-0">
-             {randomSeed && <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${randomSeed}`} alt="Profile" className="w-full h-full object-cover" />}
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-700 border-2 border-[#1c1e1c] flex items-center justify-center overflow-hidden shrink-0 shadow-md">
+             {randomSeed && <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${teacher ? teacher.email : randomSeed}`} alt="Profile" className="w-full h-full object-cover" />}
           </div>
           <div>
-            <p className={`text-xs ${isLightMode ? 'text-slate-500' : 'text-[#a0a0a0]'}`}>Selamat Pagi!</p>
-            <h1 className="text-lg font-bold">Pemain</h1>
+            <p className={`text-xs ${isLightMode ? 'text-slate-500' : 'text-[#a0a0a0]'}`}>
+              {teacher ? 'Sesi Guru Aktif' : 'Selamat Datang!'}
+            </p>
+            <h1 className="text-lg font-bold">
+              {teacher ? teacher.name : 'Pemain / Tamu'}
+            </h1>
           </div>
         </div>
-        <div className="flex items-center gap-2 md:gap-4">
+
+        <div className="flex flex-wrap items-center gap-2 md:gap-3">
+          {/* Tombol Login / Pengganti Sesi Guru */}
+          {teacher ? (
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border shadow-sm transition-all ${
+              isLightMode 
+                ? 'bg-white border-indigo-200 text-slate-800' 
+                : 'bg-[#1c1e1c] border-indigo-500/30 text-white'
+            }`}>
+              <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden">
+                <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${teacher.email}`} alt="Guru" className="w-full h-full object-cover" />
+              </div>
+              <div className="flex flex-col text-left pr-1">
+                <span className="text-xs font-bold text-indigo-600 leading-tight flex items-center gap-1">
+                  {teacher.name} <ShieldCheck className="w-3.5 h-3.5 text-indigo-500 inline" />
+                </span>
+                <span className="text-[10px] text-gray-500 truncate max-w-[130px]">
+                  {teacher.school_name || 'SLB TUNAS KASIH'}
+                </span>
+              </div>
+              
+              <Link 
+                href="/score_log"
+                title="Lihat Log Skor Murid"
+                className={`p-2 rounded-full transition-colors flex items-center gap-1 text-xs font-bold ${
+                  isLightMode 
+                    ? 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200' 
+                    : 'bg-indigo-900/40 text-indigo-300 hover:bg-indigo-900/60 border border-indigo-500/30'
+                }`}
+              >
+                <ClipboardList className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Skor Murid</span>
+              </Link>
+              
+              <button
+                onClick={logout}
+                title="Keluar dari Akun Guru"
+                className={`p-2 rounded-full transition-colors flex items-center gap-1 text-xs font-bold ${
+                  isLightMode
+                    ? 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200'
+                    : 'bg-red-950/40 text-red-400 hover:bg-red-900/60 border border-red-800/40'
+                }`}
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Keluar</span>
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setIsAuthModalOpen(true)}
+              className={`px-4 py-2.5 rounded-full text-xs font-bold border flex items-center gap-2 shadow-sm transition-all active:scale-95 ${
+                isLightMode
+                  ? 'bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700'
+                  : 'bg-[#d4ff00] text-black border-[#d4ff00] hover:bg-[#b8de00]'
+              }`}
+            >
+              <UserCheck className="w-4 h-4" /> Login Guru / Register
+            </button>
+          )}
+
           {/* Game Duration Selector */}
           <div className={`flex items-center p-1 rounded-full border ${isLightMode ? 'bg-white border-slate-200 shadow-sm' : 'bg-[#1c1e1c] border-white/5'}`}>
             {[60, 180, 300].map((time) => (
@@ -109,9 +178,9 @@ export default function Home() {
 
           <button 
             onClick={() => { const next = !isLightMode; setIsLightMode(next); localStorage.setItem('isLightMode', String(next)); }} 
-            className={`w-12 h-12 shrink-0 rounded-full flex items-center justify-center transition-all ${isLightMode ? 'bg-white text-slate-700 shadow-sm border border-slate-200 hover:bg-slate-100' : 'bg-[#1c1e1c] text-[#a0a0a0] hover:text-white border border-white/5'}`}
+            className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center transition-all ${isLightMode ? 'bg-white text-slate-700 shadow-sm border border-slate-200 hover:bg-slate-100' : 'bg-[#1c1e1c] text-[#a0a0a0] hover:text-white border border-white/5'}`}
           >
-            {isLightMode ? <Moon className="w-6 h-6" /> : <Sun className="w-6 h-6" />}
+            {isLightMode ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
           </button>
         </div>
       </div>
@@ -248,7 +317,10 @@ export default function Home() {
                             <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${entry.name}`} alt="Avatar" className="w-6 h-6 rounded-full bg-black/40 shrink-0" />
                             <span className="font-medium text-sm truncate">{entry.name}</span>
                           </div>
-                          <span className="font-bold text-sm">{entry.score}</span>
+                          <div className="text-right">
+                            <span className="font-bold text-sm block">{entry.score}</span>
+                            <span className="text-[10px] text-emerald-400 font-semibold">{getScoreCategory(entry.score).label}</span>
+                          </div>
                        </div>
                      )) : (
                        <p className="text-[#a0a0a0] text-xs">Belum ada data.</p>
@@ -267,10 +339,13 @@ export default function Home() {
                             <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${entry.name}`} alt="Avatar" className="w-6 h-6 rounded-full bg-black/40 shrink-0" />
                             <span className="font-medium text-sm truncate">{entry.name}</span>
                           </div>
-                          <span className="font-bold text-sm">{entry.score}</span>
+                          <div className="text-right">
+                            <span className="font-bold text-sm block">{entry.score}</span>
+                            <span className="text-[10px] text-blue-400 font-semibold">{getScoreCategory(entry.score).label}</span>
+                          </div>
                        </div>
                      )) : (
-                       <p className="text-[#a0a0a0] text-xs">No data.</p>
+                       <p className="text-[#a0a0a0] text-xs">Belum ada data.</p>
                      )}
                    </div>
                 </div>
@@ -286,10 +361,13 @@ export default function Home() {
                             <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${entry.name}`} alt="Avatar" className="w-6 h-6 rounded-full bg-black/40 shrink-0" />
                             <span className="font-medium text-sm truncate">{entry.name}</span>
                           </div>
-                          <span className="font-bold text-sm">{entry.score}</span>
+                          <div className="text-right">
+                            <span className="font-bold text-sm block">{entry.score}</span>
+                            <span className="text-[10px] text-orange-400 font-semibold">{getScoreCategory(entry.score).label}</span>
+                          </div>
                        </div>
                      )) : (
-                       <p className="text-[#a0a0a0] text-xs">No data.</p>
+                       <p className="text-[#a0a0a0] text-xs">Belum ada data.</p>
                      )}
                    </div>
                 </div>
@@ -310,6 +388,15 @@ export default function Home() {
           scrollbar-width: none;
         }
       `}} />
+      <TeacherAuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onSuccess={(teacherData) => {
+          login(teacherData);
+          setIsAuthModalOpen(false);
+        }}
+        isLightMode={isLightMode}
+      />
     </main>
   );
 }

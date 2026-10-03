@@ -4,8 +4,11 @@ import { useState, useEffect, useRef } from "react";
 import HeliGame from "@/components/HeliGame";
 import HeliPoseController, { HeliPoseState } from "@/components/HeliPoseController";
 import Link from "next/link";
-import { Activity, Volume2, VolumeX, AlertTriangle, Hand, ArrowLeft , Sun, Moon} from "lucide-react";
-import { saveGameScore, getTopScoresByGame } from "@/app/actions";
+import { useRouter } from "next/navigation";
+import { Activity, Volume2, VolumeX, AlertTriangle, Hand, ArrowLeft , Sun, Moon, CheckCircle, Loader2 } from "lucide-react";
+import { saveGameScore, getTopScoresByGame, uploadScreenshotAndUpdateScore } from "@/app/actions";
+import { getStoredTeacher } from "@/lib/teacherAuth";
+import { captureGameScreenshot } from "@/lib/screenshotCapture";
 
 export interface LeaderboardEntry {
   name: string;
@@ -14,6 +17,7 @@ export interface LeaderboardEntry {
 }
 
 export default function HeliRunner() {
+  const router = useRouter();
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLightMode, setIsLightMode] = useState(true);
 
@@ -40,6 +44,8 @@ export default function HeliRunner() {
   const [volume, setVolume] = useState(0.5);
   const [isMuted, setIsMuted] = useState(false);
   const [randomSeed, setRandomSeed] = useState("");
+  const [playerSnapshot, setPlayerSnapshot] = useState<string>("");
+  const [showReportModal, setShowReportModal] = useState<boolean>(false);
   
 
   const bgmRef = useRef<HTMLAudioElement | null>(null);
@@ -89,6 +95,8 @@ export default function HeliRunner() {
     fetchLeaderboard();
   }, []);
 
+  const scoreRef = useRef(0);
+
   const startGame = () => {
     if (!playerName.trim() || !playerAge.trim()) return;
     setIsPlaying(true);
@@ -97,6 +105,7 @@ export default function HeliRunner() {
     setIsGameActive(false);
     setGameOverReason("");
     setScore(0);
+    scoreRef.current = 0;
     const savedTime = localStorage.getItem('gameDuration');
     setTimeLeft(savedTime ? parseInt(savedTime) : 300);
     setHasStartedPlaying(false);
@@ -105,48 +114,75 @@ export default function HeliRunner() {
   const handleGameOver = async (reason?: string) => {
     setIsGameActive(false);
 
+    // 1. Capture screenshot SEBELUM menutup canvas game (canvas + HUD skor/waktu + kamera)
+    let screenshotBlob: Blob | null = null;
+    try {
+      screenshotBlob = await captureGameScreenshot({
+        stats: [
+          { label: "Score", value: scoreRef.current || score, dotColor: "#3b82f6" },
+          { label: "Waktu", value: `${Math.floor(timeLeft / 60)}:${(timeLeft % 60).toString().padStart(2, "0")}` },
+        ],
+      });
+    } catch (err) {
+      console.error("Screenshot capture failed:", err);
+    }
 
+    const effectiveName = (playerName && playerName.trim() ? playerName.trim() : "PEMAIN TAMU").substring(0, 20).toUpperCase();
 
-    setIsPlaying(false);
-    setIsGameOver(true);
-    if (reason) setGameOverReason(reason);
-    if (score >= 0 && playerName.trim()) {
-      try {
-        const response = await saveGameScore(
-          playerName.substring(0, 20).toUpperCase(),
-          'heli_runner',
-          score,
-          parseInt(playerAge)
-        );
-        
-        if (!response.success) {
-          console.error("Supabase Insert Error:", response.error);
-          alert("Gagal menyimpan skor ke database: " + response.error);
-        } else {
-          console.log("Skor berhasil disimpan ke Supabase via Server Action!");
-          await fetchLeaderboard();
-        }
-      } catch (err) {
-        console.error("Failed to call saveGameScore action", err);
+    // 2. Simpan skor ke database
+    let scoreId: string | null = null;
+    try {
+      const teacher = getStoredTeacher();
+      const playedDuration = 90 - timeLeft;
+      const result = await saveGameScore(
+        effectiveName,
+        'heli_runner',
+        scoreRef.current || score,
+        parseInt(playerAge) || undefined,
+        teacher?.id,
+        teacher?.school_name,
+        undefined,
+        playedDuration
+      );
+      if (result.success && result.data && result.data[0]) {
+        scoreId = result.data[0].id;
       }
+      await fetchLeaderboard();
+    } catch (err) {
+      console.error("Failed to save score:", err);
+    }
+
+    // 3. Kembali ke pre-game menu
+    setIsPlaying(false);
+    setIsGameOver(false);
+    setIsFrozen(false);
+
+    // 4. Upload screenshot secara async (tidak blocking UI)
+    if (screenshotBlob && scoreId) {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64 = reader.result as string;
+        try {
+          await uploadScreenshotAndUpdateScore(scoreId!, base64, 'heli_runner', effectiveName);
+          console.log('[Screenshot] Upload berhasil untuk skor:', scoreId);
+        } catch (err) {
+          console.error('[Screenshot] Upload gagal:', err);
+        }
+      };
+      reader.readAsDataURL(screenshotBlob);
     }
   };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === "Space" && isPlaying && !isGameActive && !isGameOver && !isFrozen) {
+      if (e.code === "Space" && isPlaying && !isGameActive && !isGameOver) {
         e.preventDefault();
         setIsGameActive(true);
-      }
-      if (e.code === "Enter" && isFrozen) {
-        e.preventDefault();
-        setIsFrozen(false);
-        handleGameOver("Waktu Habis");
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isPlaying, isGameActive, isGameOver, isFrozen]);
+  }, [isPlaying, isGameActive, isGameOver]);
 
   useEffect(() => {
     if (isPlaying && poseState.isFlying && !hasStartedPlaying) {
@@ -156,20 +192,16 @@ export default function HeliRunner() {
 
   useEffect(() => {
     if (isPlaying && isGameActive && !isGameOver) {
+      if (timeLeft <= 0) {
+        handleGameOver("Waktu Habis");
+        return;
+      }
       const timer = setInterval(() => {
         setTimeLeft(prev => Math.max(0, prev - 1));
       }, 1000);
       return () => clearInterval(timer);
     }
-  }, [isPlaying, isGameActive, isGameOver, hasStartedPlaying]);
-
-  useEffect(() => {
-    if (isPlaying && isGameActive && !isGameOver && !isFrozen) {
-      if (timeLeft <= 0) {
-        setIsFrozen(true);
-      }
-    }
-  }, [timeLeft, isPlaying, isGameActive, isGameOver, isFrozen]);
+  }, [isPlaying, isGameActive, isGameOver, timeLeft]);
 
   return (
     <main className={`flex min-h-screen flex-col font-sans transition-colors duration-300 ${isLightMode ? 'bg-slate-50 text-slate-900' : 'bg-[#0a0d0c] text-white'}  overflow-hidden relative font-sans`}>
@@ -203,6 +235,12 @@ export default function HeliRunner() {
                 className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors text-sm"
               >
                 {isMuted ? "🔇" : "🔊"}
+              </button>
+              <button
+                onClick={() => handleGameOver("Selesai")}
+                className="px-3 py-1.5 rounded-full bg-red-600/80 hover:bg-red-600 text-white font-bold text-xs transition-colors flex items-center gap-1 shadow-md"
+              >
+                KEMBALI
               </button>
             </div>
             
@@ -372,10 +410,13 @@ export default function HeliRunner() {
             <HeliGame
               poseState={(isGameActive && !isFrozen) ? poseState : { ...poseState, isFlying: false }}
               onGameOver={handleGameOver}
-              onScoreUpdate={setScore}
+              onScoreUpdate={(s) => {
+                setScore(s);
+                scoreRef.current = s;
+              }}
             />
           </div>
-          <HeliPoseController onPoseState={setPoseState} />
+          <HeliPoseController onPoseState={setPoseState} onSnapshot={setPlayerSnapshot} />
         </>
       )}
       

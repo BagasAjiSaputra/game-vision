@@ -11,9 +11,10 @@ export type PoseState = {
 
 interface PoseControllerProps {
   onPoseState: (state: PoseState) => void;
+  onSnapshot?: (snapshot: string) => void;
 }
 
-export default function PoseController({ onPoseState }: PoseControllerProps) {
+export default function PoseController({ onPoseState, onSnapshot }: PoseControllerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -243,8 +244,8 @@ export default function PoseController({ onPoseState }: PoseControllerProps) {
           }
           prevLandmarksRef.current = landmarks;
           
-          // Kurangi waktu toleransi jalan agar karakter lebih cepat berhenti saat pemain diam
-          const isWalking = (now - lastWalkTimeRef.current) < 400;
+          // Kurangi waktu toleransi jalan menjadi 250ms agar karakter langsung berhenti berlari ketika kaki diam
+          const isWalking = (now - lastWalkTimeRef.current) < 250;
 
           // Emit state update when state changes
           const stateStr = `${lane},${isWalking},${isJumping},${isSliding}`;
@@ -252,6 +253,11 @@ export default function PoseController({ onPoseState }: PoseControllerProps) {
             kbStateRef.current.lane = lane;
             onPoseState({ lane, isWalking, isJumping, isSliding });
             lastEmittedStateRef.current = stateStr;
+          }
+
+          // Periodic snapshot capture when walking/jumping/sliding
+          if (onSnapshot && (isWalking || isJumping || isSliding) && Math.random() < 0.1) {
+            onSnapshot(canvasElement.toDataURL("image/png"));
           }
 
           // Un-mirror canvas context for text rendering so text is readable

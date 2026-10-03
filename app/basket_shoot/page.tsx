@@ -4,8 +4,11 @@ import { useState, useEffect, useRef } from "react";
 import BasketPoseController, { BasketPoseState } from "@/components/BasketPoseController";
 import BasketGame from "@/components/BasketGame";
 import Link from "next/link";
-import { Activity, Volume2, VolumeX, Clock, ArrowDown, ArrowUp, Hand, ArrowLeft, ArrowLeftRight , Sun, Moon} from "lucide-react";
-import { saveGameScore, getTopScoresByGame } from "@/app/actions";
+import { useRouter } from "next/navigation";
+import { Activity, Volume2, VolumeX, Clock, ArrowDown, ArrowUp, Hand, ArrowLeft, ArrowLeftRight , Sun, Moon, CheckCircle, Loader2 } from "lucide-react";
+import { saveGameScore, getTopScoresByGame, uploadScreenshotAndUpdateScore } from "@/app/actions";
+import { getStoredTeacher } from "@/lib/teacherAuth";
+import { captureGameScreenshot } from "@/lib/screenshotCapture";
 
 export interface LeaderboardEntry {
   name: string;
@@ -14,6 +17,7 @@ export interface LeaderboardEntry {
 }
 
 export default function BasketShootPage() {
+  const router = useRouter();
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLightMode, setIsLightMode] = useState(true);
 
@@ -40,6 +44,8 @@ export default function BasketShootPage() {
   const [isMuted, setIsMuted] = useState(false);
   const [gameOverReason, setGameOverReason] = useState("");
   const [randomSeed, setRandomSeed] = useState("");
+  const [playerSnapshot, setPlayerSnapshot] = useState<string>("");
+  const [showReportModal, setShowReportModal] = useState<boolean>(false);
   
 
   const bgmRef = useRef<HTMLAudioElement | null>(null);
@@ -103,68 +109,87 @@ export default function BasketShootPage() {
   };
 
   const handleGameOver = async (reason?: string) => {
+    // Freeze agar overlay "MULAI / Tekan SPASI" tidak muncul dan menutupi screenshot
+    setIsFrozen(true);
     setIsGameActive(false);
 
+    // 1. Capture screenshot (canvas game + skor/waktu + inset kamera MediaPipe) SEBELUM menutup game
+    let screenshotBlob: Blob | null = null;
+    try {
+      screenshotBlob = await captureGameScreenshot();
+    } catch (err) {
+      console.error("Screenshot capture failed:", err);
+    }
 
+    const effectiveName = (playerName && playerName.trim() ? playerName.trim() : "PEMAIN TAMU").substring(0, 20).toUpperCase();
 
-    setIsPlaying(false);
-    setIsGameOver(true);
-    if (reason) setGameOverReason(reason);
-    
-    if (score >= 0 && playerName.trim()) {
-      try {
-        const response = await saveGameScore(
-          playerName.substring(0, 20).toUpperCase(),
-          'basket_shoot',
-          score,
-          parseInt(playerAge)
-        );
-        
-        if (!response.success) {
-          console.error("Supabase Insert Error:", response.error);
-          alert("Gagal menyimpan skor ke database: " + response.error);
-        } else {
-          console.log("Skor berhasil disimpan ke Supabase via Server Action!");
-          await fetchLeaderboard();
-        }
-      } catch (err) {
-        console.error("Failed to call saveGameScore action", err);
+    // 2. Simpan skor ke database
+    let scoreId: string | null = null;
+    try {
+      const teacher = getStoredTeacher();
+      const playedDuration = 60 - timeLeft;
+      const result = await saveGameScore(
+        effectiveName,
+        'basket_shoot',
+        scoreRef.current || score,
+        parseInt(playerAge) || undefined,
+        teacher?.id,
+        teacher?.school_name,
+        undefined,
+        playedDuration
+      );
+      if (result.success && result.data && result.data[0]) {
+        scoreId = result.data[0].id;
       }
+      await fetchLeaderboard();
+    } catch (err) {
+      console.error("Failed to save score:", err);
+    }
+
+    // 3. Kembali ke pre-game menu
+    setIsPlaying(false);
+    setIsGameOver(false);
+    setIsFrozen(false);
+
+    // 4. Upload screenshot secara async (tidak blocking UI)
+    if (screenshotBlob && scoreId) {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64 = reader.result as string;
+        try {
+          await uploadScreenshotAndUpdateScore(scoreId!, base64, 'basket_shoot', effectiveName);
+          console.log('[Screenshot] Upload berhasil untuk skor:', scoreId);
+        } catch (err) {
+          console.error('[Screenshot] Upload gagal:', err);
+        }
+      };
+      reader.readAsDataURL(screenshotBlob);
     }
   };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === "Space" && isPlaying && !isGameActive && !isGameOver && !isFrozen) {
+      if (e.code === "Space" && isPlaying && !isGameActive && !isGameOver) {
         e.preventDefault();
         setIsGameActive(true);
-      }
-      if (e.code === "Enter" && isFrozen) {
-        e.preventDefault();
-        setIsFrozen(false);
-        handleGameOver("Waktu Habis");
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isPlaying, isGameActive, isGameOver, isFrozen]);
+  }, [isPlaying, isGameActive, isGameOver]);
 
   useEffect(() => {
     if (isPlaying && isGameActive && !isGameOver) {
+      if (timeLeft <= 0) {
+        handleGameOver("Waktu Habis");
+        return;
+      }
       const timer = setInterval(() => {
         setTimeLeft(prev => Math.max(0, prev - 1));
       }, 1000);
       return () => clearInterval(timer);
     }
-  }, [isPlaying, isGameActive, isGameOver]);
-
-  useEffect(() => {
-    if (isPlaying && isGameActive && !isGameOver && !isFrozen) {
-      if (timeLeft <= 0) {
-        setIsFrozen(true);
-      }
-    }
-  }, [timeLeft, isPlaying, isGameActive, isGameOver, isFrozen]);
+  }, [isPlaying, isGameActive, isGameOver, timeLeft]);
 
   return (
     <main className={`flex min-h-screen flex-col font-sans transition-colors duration-300 ${isLightMode ? 'bg-slate-50 text-slate-900' : 'bg-[#0a0d0c] text-white'}  overflow-hidden relative font-sans`}>
@@ -172,22 +197,8 @@ export default function BasketShootPage() {
       {/* Dynamic HUD Overlay (In-Game) */}
       {isPlaying && (
         <div className="absolute top-0 left-0 w-full p-4 z-30 flex flex-col gap-2 pointer-events-none">
-          <div className="flex justify-between items-center w-full max-w-7xl mx-auto">
-            
-            <div className="flex gap-4 items-center">
-              <div className="bg-[#1c1e1c]/90 backdrop-blur-md px-6 py-4 md:px-8 md:py-5 rounded-3xl border border-white/10 flex flex-col items-center gap-1 shadow-2xl">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-[#f97316] animate-pulse"></div>
-                  <span className="text-sm md:text-base font-bold text-gray-400 uppercase tracking-widest">Score</span>
-                </div>
-                <span className="text-4xl md:text-5xl font-black text-white">{score}</span>
-              </div>
-              <div className="bg-[#1c1e1c]/90 backdrop-blur-md px-6 py-4 md:px-8 md:py-5 rounded-3xl border border-white/10 flex flex-col items-center gap-1 shadow-2xl">
-                <span className="text-sm md:text-base font-bold text-gray-400 uppercase tracking-widest">Waktu</span>
-                <span className="text-4xl md:text-5xl font-black text-white">{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</span>
-              </div>
-            </div>
-
+          <div className="flex justify-end items-center w-full max-w-7xl mx-auto">
+            {/* Score & Waktu digambar langsung di canvas BasketGame agar ikut terekam screenshot */}
             <div className="bg-[#1c1e1c]/90 backdrop-blur-md px-4 py-2 rounded-full border border-white/5 text-xs text-gray-400 shadow-lg flex items-center gap-4 pointer-events-auto h-[52px]">
               <div className="hidden sm:block">
                 BEST: <span className="font-bold text-white text-sm">{Math.max(leaderboard[0]?.score || 0, score)}</span>
@@ -198,6 +209,12 @@ export default function BasketShootPage() {
                 className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors text-sm"
               >
                 {isMuted ? "🔇" : "🔊"}
+              </button>
+              <button
+                onClick={() => handleGameOver("Selesai")}
+                className="px-3 py-1.5 rounded-full bg-red-600/80 hover:bg-red-600 text-white font-bold text-xs transition-colors flex items-center gap-1 shadow-md"
+              >
+                KEMBALI
               </button>
             </div>
             
@@ -373,6 +390,7 @@ export default function BasketShootPage() {
           )}
           <div className="absolute inset-0 w-full h-full">
             <BasketGame
+              timeLeft={timeLeft}
               poseState={!poseState ? null : ((isGameActive && !isFrozen) ? poseState : { ...poseState, isShooting: false, isJumping: false } as BasketPoseState)}
               onScoreUpdate={(score) => {
                 setScore(score);
@@ -380,7 +398,7 @@ export default function BasketShootPage() {
               }}
             />
           </div>
-          <BasketPoseController onPoseState={setPoseState} />
+          <BasketPoseController onPoseState={setPoseState} onSnapshot={setPlayerSnapshot} />
         </>
       )}
       

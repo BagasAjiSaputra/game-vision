@@ -9,14 +9,51 @@ export type HeliPoseState = {
 
 interface HeliPoseControllerProps {
   onPoseState: (state: HeliPoseState) => void;
+  onSnapshot?: (snapshot: string) => void;
 }
 
-export default function HeliPoseController({ onPoseState }: HeliPoseControllerProps) {
+export default function HeliPoseController({ onPoseState, onSnapshot }: HeliPoseControllerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isExpanded, setIsExpanded] = useState(false);
   
   const lastEmittedStateRef = useRef<string>("");
+  const kbStateRef = useRef<{ lane: number; isFlying: boolean }>({ lane: 0, isFlying: false });
+
+  // Handle Keyboard Fallback Controls
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      let changed = false;
+      if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") {
+        kbStateRef.current.lane = Math.max(-1, kbStateRef.current.lane - 1);
+        changed = true;
+      } else if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") {
+        kbStateRef.current.lane = Math.min(1, kbStateRef.current.lane + 1);
+        changed = true;
+      } else if (e.key === "ArrowUp" || e.key === "w" || e.key === "W" || e.key === " ") {
+        kbStateRef.current.isFlying = true;
+        changed = true;
+      }
+
+      if (changed) {
+        onPoseState({ lane: kbStateRef.current.lane, isFlying: kbStateRef.current.isFlying });
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "ArrowUp" || e.key === "w" || e.key === "W" || e.key === " ") {
+        kbStateRef.current.isFlying = false;
+        onPoseState({ lane: kbStateRef.current.lane, isFlying: false });
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, [onPoseState]);
   
   useEffect(() => {
     const videoElement = videoRef.current;
@@ -159,15 +196,23 @@ export default function HeliPoseController({ onPoseState }: HeliPoseControllerPr
           }
 
           // Flying detection
-          // Leg lift: if one knee is noticeably higher than the other (diff > 0.08)
-          // or if both knees are raised high above the regular standing position.
-          const isFlying = Math.abs(leftKnee.y - rightKnee.y) > 0.08 || 
-                           (leftKnee.y < leftHip.y + 0.25 && rightKnee.y < rightHip.y + 0.25);
+          // Leg lift: Kaki diangkat / dinaikkan (salah satu lutut diangkat tinggi atau selisih tinggi lutut signifikan)
+          // Kaki turun (kedua lutut di posisi berdiri normal) -> isFlying = false (helikopter berhenti!)
+          const isLeftLegLifted = leftKnee.y < leftHip.y + 0.14;
+          const isRightLegLifted = rightKnee.y < rightHip.y + 0.14;
+          const isKneeDifferenceHigh = Math.abs(leftKnee.y - rightKnee.y) > 0.06;
+
+          const isFlying = isLeftLegLifted || isRightLegLifted || isKneeDifferenceHigh;
 
           const stateStr = `${lane},${isFlying}`;
           if (stateStr !== lastEmittedStateRef.current) {
              onPoseState({ lane, isFlying });
              lastEmittedStateRef.current = stateStr;
+          }
+
+          // Periodic snapshot capture when player is active
+          if (onSnapshot && isFlying && Math.random() < 0.1) {
+            onSnapshot(canvasElement.toDataURL("image/png"));
           }
         }
         canvasCtx.restore();
