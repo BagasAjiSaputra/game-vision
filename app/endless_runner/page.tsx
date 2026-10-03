@@ -121,10 +121,16 @@ export default function EndlessRunner() {
   const handleGameOver = async (reason?: string) => {
     setIsGameActive(false);
 
-    // 1. Capture screenshot SEBELUM menutup canvas game
+    // 1. Capture screenshot SEBELUM menutup canvas game (canvas + HUD skor/koin/waktu + kamera)
     let screenshotBlob: Blob | null = null;
     try {
-      screenshotBlob = await captureGameScreenshot();
+      screenshotBlob = await captureGameScreenshot({
+        stats: [
+          { label: "Score", value: scoreRef.current || score, dotColor: "#d4ff00" },
+          { label: "Koin", value: coins, valueColor: "#d4ff00" },
+          { label: "Waktu", value: `${Math.floor(timeLeft / 60)}:${(timeLeft % 60).toString().padStart(2, "0")}` },
+        ],
+      });
     } catch (err) {
       console.error("Screenshot capture failed:", err);
     }

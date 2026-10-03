@@ -109,9 +109,11 @@ export default function BasketShootPage() {
   };
 
   const handleGameOver = async (reason?: string) => {
+    // Freeze agar overlay "MULAI / Tekan SPASI" tidak muncul dan menutupi screenshot
+    setIsFrozen(true);
     setIsGameActive(false);
 
-    // 1. Capture screenshot SEBELUM menutup canvas game
+    // 1. Capture screenshot (canvas game + skor/waktu + inset kamera MediaPipe) SEBELUM menutup game
     let screenshotBlob: Blob | null = null;
     try {
       screenshotBlob = await captureGameScreenshot();
@@ -195,22 +197,8 @@ export default function BasketShootPage() {
       {/* Dynamic HUD Overlay (In-Game) */}
       {isPlaying && (
         <div className="absolute top-0 left-0 w-full p-4 z-30 flex flex-col gap-2 pointer-events-none">
-          <div className="flex justify-between items-center w-full max-w-7xl mx-auto">
-            
-            <div className="flex gap-4 items-center">
-              <div className="bg-[#1c1e1c]/90 backdrop-blur-md px-6 py-4 md:px-8 md:py-5 rounded-3xl border border-white/10 flex flex-col items-center gap-1 shadow-2xl">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-[#f97316] animate-pulse"></div>
-                  <span className="text-sm md:text-base font-bold text-gray-400 uppercase tracking-widest">Score</span>
-                </div>
-                <span className="text-4xl md:text-5xl font-black text-white">{score}</span>
-              </div>
-              <div className="bg-[#1c1e1c]/90 backdrop-blur-md px-6 py-4 md:px-8 md:py-5 rounded-3xl border border-white/10 flex flex-col items-center gap-1 shadow-2xl">
-                <span className="text-sm md:text-base font-bold text-gray-400 uppercase tracking-widest">Waktu</span>
-                <span className="text-4xl md:text-5xl font-black text-white">{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</span>
-              </div>
-            </div>
-
+          <div className="flex justify-end items-center w-full max-w-7xl mx-auto">
+            {/* Score & Waktu digambar langsung di canvas BasketGame agar ikut terekam screenshot */}
             <div className="bg-[#1c1e1c]/90 backdrop-blur-md px-4 py-2 rounded-full border border-white/5 text-xs text-gray-400 shadow-lg flex items-center gap-4 pointer-events-auto h-[52px]">
               <div className="hidden sm:block">
                 BEST: <span className="font-bold text-white text-sm">{Math.max(leaderboard[0]?.score || 0, score)}</span>
@@ -402,6 +390,7 @@ export default function BasketShootPage() {
           )}
           <div className="absolute inset-0 w-full h-full">
             <BasketGame
+              timeLeft={timeLeft}
               poseState={!poseState ? null : ((isGameActive && !isFrozen) ? poseState : { ...poseState, isShooting: false, isJumping: false } as BasketPoseState)}
               onScoreUpdate={(score) => {
                 setScore(score);

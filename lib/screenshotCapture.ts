@@ -5,11 +5,28 @@
  * menjadi satu gambar komposit untuk dokumentasi evaluasi.
  */
 
+export interface ScreenshotStat {
+  label: string;
+  value: string | number;
+  /** Warna angka (default putih) */
+  valueColor?: string;
+  /** Titik indikator di samping label (opsional) */
+  dotColor?: string;
+}
+
+export interface CaptureOptions {
+  /**
+   * HUD yang tampil di atas canvas sebagai elemen DOM (skor, koin, waktu, ...).
+   * Digambar ke screenshot di kiri atas dengan gaya yang sama seperti HUD game.
+   */
+  stats?: ScreenshotStat[];
+}
+
 /**
- * Capture screenshot komposit: Game canvas + MediaPipe kamera overlay.
+ * Capture screenshot komposit: Game canvas + HUD (skor/koin/waktu) + MediaPipe kamera overlay.
  * Returns: Blob JPEG, atau null jika gagal.
  */
-export async function captureGameScreenshot(): Promise<Blob | null> {
+export async function captureGameScreenshot(options: CaptureOptions = {}): Promise<Blob | null> {
   try {
     const allCanvases = Array.from(document.querySelectorAll('canvas'));
     const videos = Array.from(document.querySelectorAll('video'));
@@ -73,6 +90,11 @@ export async function captureGameScreenshot(): Promise<Blob | null> {
       }
     } catch (err) {
       console.error('[Screenshot] Gagal draw game canvas:', err);
+    }
+
+    // 1b. HUD DOM (skor, koin, waktu) yang tampil di atas canvas
+    if (options.stats && options.stats.length > 0) {
+      drawHudStats(ctx, options.stats, outputWidth);
     }
 
     // 2. Hitung ukuran & posisi inset kamera (kanan bawah, mirip layout asli)
@@ -165,6 +187,102 @@ export async function captureGameScreenshot(): Promise<Blob | null> {
   } catch (err) {
     console.error('[Screenshot] Capture failed:', err);
     return null;
+  }
+}
+
+/**
+ * Gambar kotak HUD (mirip HUD game: kartu gelap rounded, label abu-abu, angka besar tebal)
+ * berjajar di kiri atas screenshot.
+ */
+function drawHudStats(ctx: CanvasRenderingContext2D, stats: ScreenshotStat[], outputWidth: number) {
+  const s = Math.min(1.4, Math.max(0.7, outputWidth / 1280));
+  const fontFamily =
+    getComputedStyle(document.body).fontFamily || 'ui-sans-serif, system-ui, sans-serif';
+
+  const margin = 16 * s;
+  const gap = 16 * s;
+  const padX = 28 * s;
+  const boxH = 104 * s;
+  const radius = 24 * s;
+  const labelFont = `700 ${15 * s}px ${fontFamily}`;
+  const valueFont = `900 ${46 * s}px ${fontFamily}`;
+  const dotR = 6 * s;
+  const dotGap = 8 * s;
+  const letterSpacing = `${2 * s}px`;
+  const supportsLetterSpacing = 'letterSpacing' in ctx;
+  const setSpacing = (v: string) => {
+    if (supportsLetterSpacing) {
+      (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = v;
+    }
+  };
+
+  let x = margin;
+  const y = margin;
+
+  for (const stat of stats) {
+    const label = stat.label.toUpperCase();
+    const value = String(stat.value);
+
+    ctx.save();
+    ctx.font = labelFont;
+    setSpacing(letterSpacing);
+    const labelW = ctx.measureText(label).width + (stat.dotColor ? dotR * 2 + dotGap : 0);
+    ctx.font = valueFont;
+    setSpacing('0px');
+    const valueW = ctx.measureText(value).width;
+    ctx.restore();
+
+    const boxW = Math.max(130 * s, Math.max(labelW, valueW) + padX * 2);
+
+    // Kartu
+    ctx.save();
+    ctx.beginPath();
+    if (typeof ctx.roundRect === 'function') ctx.roundRect(x, y, boxW, boxH, radius);
+    else ctx.rect(x, y, boxW, boxH);
+    ctx.fillStyle = 'rgba(28, 30, 28, 0.9)';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+    ctx.shadowBlur = 24 * s;
+    ctx.shadowOffsetY = 8 * s;
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.stroke();
+    ctx.restore();
+
+    const cx = x + boxW / 2;
+    const labelY = y + 27 * s;
+    const valueY = y + 69 * s;
+
+    // Label (+ titik indikator)
+    ctx.save();
+    ctx.font = labelFont;
+    setSpacing(letterSpacing);
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    let labelX = cx - labelW / 2;
+    if (stat.dotColor) {
+      ctx.fillStyle = stat.dotColor;
+      ctx.beginPath();
+      ctx.arc(labelX + dotR, labelY, dotR, 0, Math.PI * 2);
+      ctx.fill();
+      labelX += dotR * 2 + dotGap;
+    }
+    ctx.fillStyle = '#9ca3af';
+    ctx.fillText(label, labelX, labelY);
+    ctx.restore();
+
+    // Nilai
+    ctx.save();
+    ctx.font = valueFont;
+    setSpacing('0px');
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = stat.valueColor || '#ffffff';
+    ctx.fillText(value, cx, valueY);
+    ctx.restore();
+
+    x += boxW + gap;
   }
 }
 

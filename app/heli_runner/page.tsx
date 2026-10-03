@@ -114,10 +114,15 @@ export default function HeliRunner() {
   const handleGameOver = async (reason?: string) => {
     setIsGameActive(false);
 
-    // 1. Capture screenshot SEBELUM menutup canvas game
+    // 1. Capture screenshot SEBELUM menutup canvas game (canvas + HUD skor/waktu + kamera)
     let screenshotBlob: Blob | null = null;
     try {
-      screenshotBlob = await captureGameScreenshot();
+      screenshotBlob = await captureGameScreenshot({
+        stats: [
+          { label: "Score", value: scoreRef.current || score, dotColor: "#3b82f6" },
+          { label: "Waktu", value: `${Math.floor(timeLeft / 60)}:${(timeLeft % 60).toString().padStart(2, "0")}` },
+        ],
+      });
     } catch (err) {
       console.error("Screenshot capture failed:", err);
     }
