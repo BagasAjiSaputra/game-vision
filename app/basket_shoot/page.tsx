@@ -33,6 +33,8 @@ export default function BasketShootPage() {
   const [isFrozen, setIsFrozen] = useState(false);
   const [score, setScore] = useState(0);
   const scoreRef = useRef(0);
+  // Durasi game yang dipilih di Home (detik), dipakai untuk menghitung durasi main
+  const gameDurationRef = useRef(300);
   const [timeLeft, setTimeLeft] = useState(300);
   const [isGameActive, setIsGameActive] = useState(false);
   const [poseState, setPoseState] = useState<BasketPoseState | null>(null);
@@ -105,7 +107,9 @@ export default function BasketShootPage() {
     setScore(0);
     scoreRef.current = 0;
     const savedTime = localStorage.getItem('gameDuration');
-    setTimeLeft(savedTime ? parseInt(savedTime) : 300);
+    const initialDuration = parseInt(savedTime || "") || 300;
+    gameDurationRef.current = initialDuration;
+    setTimeLeft(initialDuration);
   };
 
   const handleGameOver = async (reason?: string) => {
@@ -127,7 +131,7 @@ export default function BasketShootPage() {
     let scoreId: string | null = null;
     try {
       const teacher = getStoredTeacher();
-      const playedDuration = 60 - timeLeft;
+      const playedDuration = Math.max(0, Math.min(gameDurationRef.current, gameDurationRef.current - timeLeft));
       const result = await saveGameScore(
         effectiveName,
         'basket_shoot',
