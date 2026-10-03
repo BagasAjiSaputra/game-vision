@@ -8,9 +8,21 @@ create table if not exists public.teachers (
   email text not null unique,
   password_hash text not null,
   school_name text null default 'SLB TUNAS KASIH SURABAYA'::text,
+  is_activated boolean not null default false,
+  otp_code text null,
+  otp_expires_at timestamp with time zone null,
+  reset_token text null,
+  reset_token_expires_at timestamp with time zone null,
   created_at timestamp with time zone null default now(),
   constraint teachers_pkey primary key (id)
 ) TABLESPACE pg_default;
+
+-- Migrasi kolom jika tabel teachers sudah ada
+alter table public.teachers add column if not exists is_activated boolean not null default true;
+alter table public.teachers add column if not exists otp_code text null;
+alter table public.teachers add column if not exists otp_expires_at timestamp with time zone null;
+alter table public.teachers add column if not exists reset_token text null;
+alter table public.teachers add column if not exists reset_token_expires_at timestamp with time zone null;
 
 create index if not exists idx_teachers_email on public.teachers using btree (email) TABLESPACE pg_default;
 
