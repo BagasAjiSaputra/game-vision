@@ -858,14 +858,17 @@ export default function Game({
 
   // Speed acceleration over time (Capped at 18 to prevent speed-clipping obstacles)
   useEffect(() => {
+    if (!isWalking) return;
     const accelInterval = setInterval(() => {
       setCurrentSpeed((prev) => Math.min(18, prev + 0.1));
     }, 1000);
     return () => clearInterval(accelInterval);
-  }, []);
+  }, [isWalking]);
 
-  // Game Loop (Spawning & Scoring berkala - runs continuously for the full game duration)
+  // Game Loop (Spawning & Scoring berkala - runs continuously for the full game duration when walking)
   useEffect(() => {
+    if (!isWalking) return;
+
     const spawnInterval = setInterval(() => {
       // Poin berkala seiring waktu berlari (+2 poin tiap 1.4 detik)
       scoreRef.current = Math.min(100, scoreRef.current + 2);
@@ -905,7 +908,7 @@ export default function Game({
     }, 1400);
 
     return () => clearInterval(spawnInterval);
-  }, []);
+  }, [isWalking]);
 
   const handleCollectCoin = (id: number) => {
     setCoins((prev) => prev.filter((c) => c.id !== id));
@@ -967,7 +970,7 @@ export default function Game({
           type={obs.type}
           lane={obs.lane}
           z={obs.z}
-          speed={currentSpeed}
+          speed={isWalking ? currentSpeed : 0}
           onRemove={() => setObstacles((prev) => prev.filter((o) => o.id !== obs.id))}
           onHitPlayer={handleHitObstacle}
           onPass={handlePassObstacle}
