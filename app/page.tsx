@@ -42,10 +42,18 @@ export default function Home() {
   useEffect(() => {
     setRandomSeed(Math.random().toString(36).substring(7));
 
-    // Load leaderboards from Supabase
+    // Load leaderboards khusus murid guru yang sedang login (tidak ada global leaderboard)
     const fetchLeaderboards = async () => {
+      if (!teacher?.id) {
+        setHeliLeaderboard([]);
+        setEndlessLeaderboard([]);
+        setBasketLeaderboard([]);
+        setOverallLeaderboard([]);
+        return;
+      }
+
       try {
-        const response = await getLeaderboards();
+        const response = await getLeaderboards(teacher.id);
         if (response.success && response.data) {
           const heli = response.data.heli || [];
           const endless = response.data.endless || [];
@@ -83,7 +91,7 @@ export default function Home() {
     };
     
     fetchLeaderboards();
-  }, []);
+  }, [teacher]);
 
   return (
     <main className={`flex min-h-screen flex-col font-sans px-6 py-12 md:px-12 md:py-16 w-full transition-colors duration-300 ${isLightMode ? 'bg-slate-50 text-slate-900' : 'bg-[#0a0d0c] text-white'}`}>
@@ -243,23 +251,55 @@ export default function Home() {
 
           <div className="mt-12">
             <div className="flex justify-between items-end mb-4">
-              <h3 className="text-lg font-bold">Rekor Tertinggi</h3>
-              <Link href="/score_log" className={`text-xs cursor-pointer ${isLightMode ? 'text-indigo-600 hover:text-indigo-800 font-bold' : 'text-[#a0a0a0] hover:text-white'}`}>Lihat Papan Peringkat</Link>
+              <h3 className="text-lg font-bold">
+                {teacher ? "Peringkat Murid Saya" : "Peringkat Murid (Khusus Guru)"}
+              </h3>
+              {teacher ? (
+                <Link href="/score_log" className={`text-xs cursor-pointer ${isLightMode ? 'text-indigo-600 hover:text-indigo-800 font-bold' : 'text-[#a0a0a0] hover:text-white'}`}>
+                  Buka Log Skor Murid &rarr;
+                </Link>
+              ) : (
+                <button 
+                  onClick={() => setIsAuthModalOpen(true)} 
+                  className={`text-xs font-bold cursor-pointer ${isLightMode ? 'text-indigo-600 hover:text-indigo-800' : 'text-[#d4ff00] hover:underline'}`}
+                >
+                  Login Guru untuk Akses &rarr;
+                </button>
+              )}
             </div>
             
-            <Link 
-               href="/score_log"
-               className={`block rounded-3xl border-2 p-5 flex items-center justify-between cursor-pointer group transition-all active:translate-y-[6px] active:shadow-none ${isLightMode ? 'bg-white text-slate-800 border-slate-200 hover:border-yellow-400 hover:shadow-[0_8px_0_0_#facc15] shadow-[0_6px_0_0_#e2e8f0]' : 'bg-[#1c1e1c] text-white border-[#2a2d2a] hover:-translate-y-1 hover:border-[#d4ff00] hover:shadow-[0_8px_0_0_#9bb800] hover:bg-[#d4ff00] hover:text-black shadow-[0_6px_0_0_#2a2d2a]'}`}
-            >
-              <div className="flex items-center gap-4">
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${isLightMode ? 'bg-yellow-100 text-yellow-600 group-hover:bg-yellow-400 group-hover:text-white' : 'bg-yellow-500/10 group-hover:bg-black/10 text-yellow-500 group-hover:text-black'}`}><Trophy className="w-6 h-6" /></div>
-                <div>
-                  <p className="font-bold">Papan Peringkat Global</p>
-                  <p className={`text-xs mt-1 transition-colors ${isLightMode ? 'text-slate-500 group-hover:text-slate-700' : 'text-[#a0a0a0] group-hover:text-black/70'}`}>Lihat rekor terbaik di semua mode</p>
+            {teacher ? (
+              <div 
+                 onClick={() => setIsLeaderboardOpen(true)}
+                 className={`block rounded-3xl border-2 p-5 flex items-center justify-between cursor-pointer group transition-all active:translate-y-[6px] active:shadow-none ${isLightMode ? 'bg-white text-slate-800 border-slate-200 hover:border-yellow-400 hover:shadow-[0_8px_0_0_#facc15] shadow-[0_6px_0_0_#e2e8f0]' : 'bg-[#1c1e1c] text-white border-[#2a2d2a] hover:-translate-y-1 hover:border-[#d4ff00] hover:shadow-[0_8px_0_0_#9bb800] hover:bg-[#d4ff00] hover:text-black shadow-[0_6px_0_0_#2a2d2a]'}`}
+              >
+                <div className="flex items-center gap-4">
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${isLightMode ? 'bg-yellow-100 text-yellow-600 group-hover:bg-yellow-400 group-hover:text-white' : 'bg-yellow-500/10 group-hover:bg-black/10 text-yellow-500 group-hover:text-black'}`}><Trophy className="w-6 h-6" /></div>
+                  <div>
+                    <p className="font-bold">Papan Peringkat Murid — {teacher.name}</p>
+                    <p className={`text-xs mt-1 transition-colors ${isLightMode ? 'text-slate-500 group-hover:text-slate-700' : 'text-[#a0a0a0] group-hover:text-black/70'}`}>Lihat rekor terbaik murid Anda di semua mode</p>
+                  </div>
+                </div>
+                <div className={`transition-colors ${isLightMode ? 'text-slate-400 group-hover:text-yellow-500' : 'text-[#a0a0a0] group-hover:text-black'}`}><ArrowRight className="w-5 h-5" /></div>
+              </div>
+            ) : (
+              <div 
+                 onClick={() => setIsAuthModalOpen(true)}
+                 className={`block rounded-3xl border-2 p-5 flex items-center justify-between cursor-pointer group transition-all active:translate-y-[6px] active:shadow-none ${isLightMode ? 'bg-white text-slate-800 border-slate-200 hover:border-indigo-400 hover:shadow-[0_8px_0_0_#818cf8] shadow-[0_6px_0_0_#e2e8f0]' : 'bg-[#1c1e1c] text-white border-[#2a2d2a] hover:-translate-y-1 hover:border-[#d4ff00] hover:shadow-[0_8px_0_0_#9bb800] hover:bg-[#d4ff00] hover:text-black shadow-[0_6px_0_0_#2a2d2a]'}`}
+              >
+                <div className="flex items-center gap-4">
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${isLightMode ? 'bg-indigo-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white' : 'bg-indigo-500/10 group-hover:bg-black/10 text-indigo-400 group-hover:text-black'}`}><ShieldCheck className="w-6 h-6" /></div>
+                  <div>
+                    <p className="font-bold">Papan Peringkat Terproteksi</p>
+                    <p className={`text-xs mt-1 transition-colors ${isLightMode ? 'text-slate-500 group-hover:text-slate-700' : 'text-[#a0a0a0] group-hover:text-black/70'}`}>Login sebagai guru untuk melihat rekor terbaik murid Anda</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs font-bold ${isLightMode ? 'text-indigo-600' : 'text-[#d4ff00] group-hover:text-black'}`}>Login</span>
+                  <ArrowRight className="w-5 h-5" />
                 </div>
               </div>
-              <div className={`transition-colors ${isLightMode ? 'text-slate-400 group-hover:text-yellow-500' : 'text-[#a0a0a0] group-hover:text-black'}`}><ArrowRight className="w-5 h-5" /></div>
-            </Link>
+            )}
           </div>
 
         </div>
@@ -274,7 +314,9 @@ export default function Home() {
             >
               ✕
             </button>
-            <h2 className="text-2xl font-bold mb-6 text-white">Papan Peringkat Global</h2>
+            <h2 className="text-2xl font-bold mb-6 text-white">
+              {teacher ? `Papan Peringkat Murid — ${teacher.name}` : "Papan Peringkat Murid"}
+            </h2>
             
             <div className="flex-1 overflow-y-auto pr-2 space-y-8 hide-scrollbar">
               

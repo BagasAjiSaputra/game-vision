@@ -5,9 +5,10 @@ import BasketPoseController, { BasketPoseState } from "@/components/BasketPoseCo
 import BasketGame from "@/components/BasketGame";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Activity, Volume2, VolumeX, Clock, ArrowDown, ArrowUp, Hand, ArrowLeft, ArrowLeftRight , Sun, Moon, CheckCircle, Loader2 } from "lucide-react";
+import { Activity, Volume2, VolumeX, Clock, ArrowDown, ArrowUp, Hand, ArrowLeft, ArrowLeftRight , Sun, Moon, CheckCircle, AlertTriangle, Loader2, ShieldCheck, Lock, LogIn, UserCheck } from "lucide-react";
 import { saveGameScore, getTopScoresByGame, uploadScreenshotAndUpdateScore } from "@/app/actions";
-import { getStoredTeacher } from "@/lib/teacherAuth";
+import { getStoredTeacher, useTeacherAuth } from "@/lib/teacherAuth";
+import TeacherAuthModal from "@/components/TeacherAuthModal";
 import { captureGameScreenshot } from "@/lib/screenshotCapture";
 
 export interface LeaderboardEntry {
@@ -82,20 +83,31 @@ export default function BasketShootPage() {
     localStorage.setItem("gameVolume", volume.toString());
   }, [volume, isMuted]);
 
+  const { teacher } = useTeacherAuth();
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [saveStatusMsg, setSaveStatusMsg] = useState<{ type: 'success' | 'warn'; text: string } | null>(null);
+
   const fetchLeaderboard = async () => {
+    if (!teacher?.id) {
+      setLeaderboard([]);
+      return;
+    }
     try {
-      const response = await getTopScoresByGame('basket_shoot');
+      const response = await getTopScoresByGame('basket_shoot', 5, teacher.id);
       if (response.success && response.data) {
         setLeaderboard(response.data);
+      } else {
+        setLeaderboard([]);
       }
     } catch (e) {
       console.error("Failed to load leaderboard", e);
+      setLeaderboard([]);
     }
   };
 
   useEffect(() => {
     fetchLeaderboard();
-  }, []);
+  }, [teacher]);
 
   const startGame = () => {
     if (!playerName.trim() || !playerAge.trim()) return;
@@ -106,6 +118,7 @@ export default function BasketShootPage() {
     setGameOverReason("");
     setScore(0);
     scoreRef.current = 0;
+    setSaveStatusMsg(null);
     const savedTime = localStorage.getItem('gameDuration');
     const initialDuration = parseInt(savedTime || "") || 300;
     gameDurationRef.current = initialDuration;
@@ -127,27 +140,39 @@ export default function BasketShootPage() {
 
     const effectiveName = (playerName && playerName.trim() ? playerName.trim() : "PEMAIN TAMU").substring(0, 20).toUpperCase();
 
-    // 2. Simpan skor ke database
+    // 2. Simpan skor ke database (HANYA JIKA GURU SUDAH LOGIN)
     let scoreId: string | null = null;
-    try {
-      const teacher = getStoredTeacher();
-      const playedDuration = Math.max(0, Math.min(gameDurationRef.current, gameDurationRef.current - timeLeft));
-      const result = await saveGameScore(
-        effectiveName,
-        'basket_shoot',
-        scoreRef.current || score,
-        parseInt(playerAge) || undefined,
-        teacher?.id,
-        teacher?.school_name,
-        undefined,
-        playedDuration
-      );
-      if (result.success && result.data && result.data[0]) {
-        scoreId = result.data[0].id;
+    const currentTeacher = getStoredTeacher();
+    if (currentTeacher?.id) {
+      try {
+        const playedDuration = Math.max(0, Math.min(gameDurationRef.current, gameDurationRef.current - timeLeft));
+        const result = await saveGameScore(
+          effectiveName,
+          'basket_shoot',
+          scoreRef.current || score,
+          parseInt(playerAge) || undefined,
+          currentTeacher.id,
+          currentTeacher.school_name,
+          undefined,
+          playedDuration
+        );
+        if (result.success && result.data && result.data[0]) {
+          scoreId = result.data[0].id;
+        }
+        await fetchLeaderboard();
+        setSaveStatusMsg({
+          type: 'success',
+          text: `Skor ${effectiveName} (${scoreRef.current || score}) berhasil dicatat ke evaluasi Guru ${currentTeacher.name}!`
+        });
+      } catch (err) {
+        console.error("Failed to save score:", err);
       }
-      await fetchLeaderboard();
-    } catch (err) {
-      console.error("Failed to save score:", err);
+    } else {
+      console.log("Game over in guest mode. Score not saved.");
+      setSaveStatusMsg({
+        type: 'warn',
+        text: "Mode Tamu: Skor tidak disimpan karena Anda belum login sebagai Guru."
+      });
     }
 
     // 3. Kembali ke pre-game menu
@@ -155,7 +180,7 @@ export default function BasketShootPage() {
     setIsGameOver(false);
     setIsFrozen(false);
 
-    // 4. Upload screenshot secara async (tidak blocking UI)
+    // 4. Upload screenshot secara async jika guru login dan scoreId valid
     if (screenshotBlob && scoreId) {
       const reader = new FileReader();
       reader.onloadend = async () => {
@@ -258,6 +283,70 @@ export default function BasketShootPage() {
             </div>
           </div>
 
+          {/* Notification / Save Status Banner */}
+          {saveStatusMsg && (
+            <div className={`p-4 rounded-2xl border-2 flex items-center gap-3 mb-6 transition-all ${
+              saveStatusMsg.type === 'success'
+                ? isLightMode ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-emerald-950/40 border-emerald-500/30 text-emerald-300'
+                : isLightMode ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-amber-950/40 border-amber-500/30 text-amber-300'
+            }`}>
+              {saveStatusMsg.type === 'success' ? <CheckCircle className="w-5 h-5 shrink-0" /> : <AlertTriangle className="w-5 h-5 shrink-0" />}
+              <p className="text-xs font-bold">{saveStatusMsg.text}</p>
+            </div>
+          )}
+
+          {/* Teacher Auth Status / Guest Warning Banner */}
+          {teacher ? (
+            <div className={`p-4 rounded-2xl border-2 flex items-center justify-between gap-3 mb-8 transition-all ${
+              isLightMode ? 'bg-orange-50 border-orange-200 text-orange-950 shadow-sm' : 'bg-orange-950/30 border-orange-500/30 text-white'
+            }`}>
+              <div className="flex items-center gap-2.5">
+                <ShieldCheck className="w-5 h-5 text-orange-600 dark:text-orange-400 shrink-0" />
+                <div>
+                  <p className="text-xs font-bold leading-tight flex items-center gap-1.5">
+                    <span>Sesi Guru Aktif: {teacher.name}</span>
+                    <span className="text-[10px] opacity-70">({teacher.school_name || 'SLB TUNAS KASIH'})</span>
+                  </p>
+                  <p className={`text-[11px] font-medium mt-0.5 ${isLightMode ? 'text-orange-800' : 'text-gray-300'}`}>
+                    Skor bermain akan otomatis tersimpan ke log evaluasi privat murid Anda.
+                  </p>
+                </div>
+              </div>
+              <Link
+                href="/score_log"
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold border shrink-0 transition-colors ${
+                  isLightMode ? 'bg-white border-orange-200 text-orange-700 hover:bg-orange-50 shadow-sm' : 'bg-[#1c1e1c] border-orange-500/30 text-orange-300 hover:bg-white/5'
+                }`}
+              >
+                Log Skor Murid
+              </Link>
+            </div>
+          ) : (
+            <div className={`p-4 rounded-2xl border-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-8 transition-all ${
+              isLightMode ? 'bg-amber-50 border-amber-200 text-amber-900 shadow-sm' : 'bg-amber-950/30 border-amber-500/30 text-amber-200'
+            }`}>
+              <div className="flex items-start sm:items-center gap-2.5">
+                <Lock className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5 sm:mt-0" />
+                <div>
+                  <p className="text-xs font-bold">Mode Tamu (Belum Login Guru)</p>
+                  <p className="text-[11px] font-medium opacity-80 mt-0.5">
+                    Data permainan tidak akan disimpan. Login sebagai guru untuk mencatat skor evaluasi murid Anda.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsAuthModalOpen(true)}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold border shrink-0 transition-all active:scale-95 flex items-center justify-center gap-1.5 ${
+                  isLightMode 
+                    ? 'bg-amber-600 text-white border-amber-700 hover:bg-amber-700 shadow-sm' 
+                    : 'bg-[#d4ff00] text-black border-[#9bb800] hover:bg-[#b8de00]'
+                }`}
+              >
+                <LogIn className="w-3.5 h-3.5" /> Login Guru
+              </button>
+            </div>
+          )}
+
           <div className="flex flex-col md:flex-row gap-12 lg:gap-20">
             
             {/* Left Column: Player & Controls */}
@@ -321,36 +410,74 @@ export default function BasketShootPage() {
             {/* Right Column: Leaderboard */}
             <div className="flex-1 flex flex-col">
               <div className="flex justify-between items-end mb-6 mt-12 md:mt-0">
-                <h3 className="text-2xl font-bold">Penembak Terbaik</h3>
-                <span className={`cursor-pointer transition-colors font-medium ${isLightMode ? 'text-orange-600 hover:text-orange-800' : 'text-[#a0a0a0] hover:text-white'}`}>Lihat Semua</span>
+                <h3 className="text-2xl font-bold">
+                  {teacher ? "Penembak Terbaik (Murid Saya)" : "Peringkat Murid"}
+                </h3>
+                {teacher ? (
+                  <Link href="/score_log" className={`cursor-pointer transition-colors font-medium ${isLightMode ? 'text-orange-600 hover:text-orange-800' : 'text-[#a0a0a0] hover:text-white'}`}>
+                    Log Lengkap &rarr;
+                  </Link>
+                ) : (
+                  <button 
+                    onClick={() => setIsAuthModalOpen(true)}
+                    className={`cursor-pointer transition-colors font-bold text-xs ${isLightMode ? 'text-indigo-600 hover:underline' : 'text-[#d4ff00] hover:underline'}`}
+                  >
+                    Login Guru
+                  </button>
+                )}
               </div>
               
               <div className="flex flex-col gap-4">
-                {leaderboard.length > 0 ? (
-                  leaderboard.map((entry, idx) => (
-                    <div 
-                      key={idx} 
-                      className={`rounded-3xl p-6 md:p-8 flex items-center justify-between transition-all hover:-translate-y-1 border-2 ${idx === 0 ? 'bg-[#f97316] text-black border-[#ea580c] shadow-[0_6px_0_0_#ea580c] hover:shadow-[0_8px_0_0_#ea580c]' : (isLightMode ? `bg-white text-slate-800 border-slate-200 shadow-sm hover:border-orange-500 hover:shadow-[0_8px_0_0_#e2e8f0]` : 'bg-[#1c1e1c] text-white border-[#2a2d2a] shadow-[0_6px_0_0_#2a2d2a] hover:shadow-[0_8px_0_0_#f97316] hover:border-[#f97316]')}`}
-                    >
-                      <div className="flex items-center gap-6">
-                        <div className={`w-14 h-14 rounded-full flex items-center justify-center font-bold text-xl shrink-0 ${idx === 0 ? 'bg-black/10' : (isLightMode ? 'bg-slate-100 text-slate-500' : 'bg-white/5')}`}>
-                          #{idx + 1}
+                {teacher ? (
+                  leaderboard.length > 0 ? (
+                    leaderboard.map((entry, idx) => (
+                      <div 
+                        key={idx} 
+                        className={`rounded-3xl p-6 md:p-8 flex items-center justify-between transition-all hover:-translate-y-1 border-2 ${idx === 0 ? 'bg-[#f97316] text-black border-[#ea580c] shadow-[0_6px_0_0_#ea580c] hover:shadow-[0_8px_0_0_#ea580c]' : (isLightMode ? `bg-white text-slate-800 border-slate-200 shadow-sm hover:border-orange-500 hover:shadow-[0_8px_0_0_#e2e8f0]` : 'bg-[#1c1e1c] text-white border-[#2a2d2a] shadow-[0_6px_0_0_#2a2d2a] hover:shadow-[0_8px_0_0_#f97316] hover:border-[#f97316]')}`}
+                      >
+                        <div className="flex items-center gap-6">
+                          <div className={`w-14 h-14 rounded-full flex items-center justify-center font-bold text-xl shrink-0 ${idx === 0 ? 'bg-black/10' : (isLightMode ? 'bg-slate-100 text-slate-500' : 'bg-white/5')}`}>
+                            #{idx + 1}
+                          </div>
+                          <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${entry.name}`} alt="Avatar" className="w-14 h-14 rounded-full bg-black/40 shrink-0" />
+                          <div>
+                            <p className="font-bold text-xl md:text-2xl">{entry.name}</p>
+                            <p className={`font-medium mt-1 ${idx === 0 ? 'text-black/60' : (isLightMode ? 'text-slate-500' : 'text-[#a0a0a0]')}`}>{entry.date}</p>
+                          </div>
                         </div>
-                        <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${entry.name}`} alt="Avatar" className="w-14 h-14 rounded-full bg-black/40 shrink-0" />
-                        <div>
-                          <p className="font-bold text-xl md:text-2xl">{entry.name}</p>
-                          <p className={`font-medium mt-1 ${idx === 0 ? 'text-black/60' : (isLightMode ? 'text-slate-500' : 'text-[#a0a0a0]')}`}>{entry.date}</p>
+                        <div className="text-right">
+                          <p className={`text-sm mb-1 font-medium ${idx === 0 ? 'text-black/60' : (isLightMode ? 'text-slate-500' : 'text-[#a0a0a0]')}`}>Skor</p>
+                          <p className="font-black text-3xl md:text-4xl">{entry.score}</p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className={`text-sm mb-1 font-medium ${idx === 0 ? 'text-black/60' : (isLightMode ? 'text-slate-500' : 'text-[#a0a0a0]')}`}>Skor</p>
-                        <p className="font-black text-3xl md:text-4xl">{entry.score}</p>
-                      </div>
+                    ))
+                  ) : (
+                    <div className={`rounded-3xl p-12 text-center border ${isLightMode ? 'bg-white border-slate-200 shadow-sm' : 'bg-[#1c1e1c] border-white/5'}`}>
+                      <p className={`text-base font-bold ${isLightMode ? 'text-slate-700' : 'text-white'}`}>Belum ada rekor murid Anda.</p>
+                      <p className={`text-xs mt-1 ${isLightMode ? 'text-slate-500' : 'text-[#a0a0a0]'}`}>Mainkan game untuk mencatat rekor pertama!</p>
                     </div>
-                  ))
+                  )
                 ) : (
-                  <div className={`rounded-3xl p-12 text-center border ${isLightMode ? 'bg-white border-slate-200 shadow-sm' : 'bg-[#1c1e1c] border-white/5'}`}>
-                    <p className={`text-lg ${isLightMode ? 'text-slate-500' : 'text-[#a0a0a0]'}`}>Belum ada rekor.</p>
+                  <div className={`rounded-3xl p-8 text-center border-2 flex flex-col items-center justify-center ${
+                    isLightMode ? 'bg-white border-slate-200 shadow-[0_6px_0_0_#e2e8f0]' : 'bg-[#1c1e1c] border-[#2a2d2a] shadow-[0_6px_0_0_#0a0d0c]'
+                  }`}>
+                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-4 border-2 ${
+                      isLightMode ? 'bg-orange-50 border-orange-200 text-orange-600' : 'bg-[#f97316]/10 border-[#f97316]/30 text-[#f97316]'
+                    }`}>
+                      <Lock className="w-7 h-7" />
+                    </div>
+                    <p className="font-black text-lg mb-1">Peringkat Khusus Guru</p>
+                    <p className={`text-xs mb-5 max-w-xs ${isLightMode ? 'text-slate-500' : 'text-[#a0a0a0]'}`}>
+                      Peringkat sekarang diprivasi untuk masing-masing guru. Login untuk melihat prestasi murid Anda.
+                    </p>
+                    <button
+                      onClick={() => setIsAuthModalOpen(true)}
+                      className={`px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all border-2 active:scale-95 flex items-center gap-2 ${
+                        isLightMode ? 'bg-orange-600 hover:bg-orange-700 text-white border-orange-700' : 'bg-[#f97316] text-black border-[#ea580c]'
+                      }`}
+                    >
+                      <LogIn className="w-4 h-4" /> Login Guru
+                    </button>
                   </div>
                 )}
               </div>
@@ -406,15 +533,12 @@ export default function BasketShootPage() {
         </>
       )}
       
-      <style dangerouslySetInnerHTML={{__html: `
-        .hide-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        .hide-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-      `}} />
+      <TeacherAuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onSuccess={() => {}}
+        isLightMode={isLightMode}
+      />
     </main>
   );
 }

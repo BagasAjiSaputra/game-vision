@@ -18,11 +18,14 @@ import {
   FileText,
   Activity,
   Award,
-  Users
+  Users,
+  Lock,
+  LogIn
 } from "lucide-react";
 import { getGameScores } from "@/app/actions";
 import { getScoreCategory, getGameTitle } from "@/lib/scoreUtils";
 import { useTeacherAuth } from "@/lib/teacherAuth";
+import TeacherAuthModal from "@/components/TeacherAuthModal";
 
 interface ScoreLog {
   id: string;
@@ -50,36 +53,52 @@ export default function ScoreLogPage() {
   const [logs, setLogs] = useState<ScoreLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterGame, setFilterGame] = useState<string>("all");
-  const [filterMode, setFilterMode] = useState<"all" | "my_students">("all");
   const [searchName, setSearchName] = useState("");
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   const [isLightMode, setIsLightMode] = useState(true);
-  const { teacher } = useTeacherAuth();
+  const { teacher, isLoaded } = useTeacherAuth();
 
   useEffect(() => {
-    fetchLogs();
     const savedTheme = localStorage.getItem("isLightMode");
     if (savedTheme !== null) setIsLightMode(savedTheme === "true");
   }, []);
 
-  const fetchLogs = async () => {
+  const fetchLogs = async (teacherId?: string) => {
+    const targetId = teacherId || teacher?.id;
+    if (!targetId) {
+      setLogs([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
-      const response = await getGameScores();
+      const response = await getGameScores(targetId);
       if (!response.success) throw new Error(response.error);
       setLogs(response.data || []);
     } catch (err) {
       console.error("Error fetching logs:", err);
+      setLogs([]);
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    if (isLoaded) {
+      if (teacher?.id) {
+        fetchLogs(teacher.id);
+      } else {
+        setLogs([]);
+        setLoading(false);
+      }
+    }
+  }, [teacher, isLoaded]);
+
   const filteredLogs = logs.filter(log => {
     const matchGame = filterGame === "all" || log.game_type === filterGame;
     const matchName = log.player_name.toLowerCase().includes(searchName.toLowerCase());
-    const matchTeacher = filterMode === "all" || (teacher && log.teacher_id === teacher.id);
-    return matchGame && matchName && matchTeacher;
+    return matchGame && matchName;
   });
 
   const getGameName = (type: string) => {
@@ -137,7 +156,7 @@ export default function ScoreLogPage() {
       const gameName = getGameName(log.game_type);
       const category = getScoreCategory(log.score).label;
       const school = log.school || log.teachers?.school_name || "SLB TUNAS KASIH";
-      const teacherName = log.teachers?.name || "-";
+      const teacherName = log.teachers?.name || teacher?.name || "-";
       const formattedDate = new Date(log.created_at).toLocaleString("id-ID");
 
       return [
@@ -158,9 +177,10 @@ export default function ScoreLogPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     const dateStr = new Date().toISOString().split("T")[0];
+    const safeTeacherName = (teacher?.name || "Guru").replace(/[^a-zA-Z0-9]/g, '_');
     
     link.href = url;
-    link.setAttribute("download", `Log_Skor_Motionpedia_${filterMode}_${dateStr}.csv`);
+    link.setAttribute("download", `Log_Skor_${safeTeacherName}_${dateStr}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -171,6 +191,96 @@ export default function ScoreLogPage() {
   const avgScore = totalEvaluations > 0 ? Math.round(filteredLogs.reduce((acc, l) => acc + l.score, 0) / totalEvaluations) : 0;
   const highestScore = totalEvaluations > 0 ? Math.max(...filteredLogs.map(l => l.score)) : 0;
   const uniqueStudents = new Set(filteredLogs.map(l => l.player_name.toLowerCase())).size;
+
+  // View jika belum login sebagai Guru
+  if (isLoaded && !teacher) {
+    return (
+      <main className={`min-h-screen font-sans px-6 py-12 md:px-12 md:py-16 transition-colors duration-300 flex flex-col justify-between ${
+        isLightMode ? 'bg-slate-50 text-slate-900' : 'bg-[#0a0d0c] text-white'
+      }`}>
+        <div className="max-w-4xl mx-auto w-full">
+          {/* Header */}
+          <header className="flex items-center justify-between gap-4 mb-12">
+            <Link 
+              href="/" 
+              className={`w-11 h-11 rounded-2xl flex items-center justify-center border-2 transition-all active:translate-y-[2px] active:shadow-none ${
+                isLightMode 
+                  ? 'bg-white text-slate-800 border-slate-200 shadow-[0_4px_0_0_#e2e8f0] hover:bg-slate-50' 
+                  : 'bg-[#1c1e1c] text-white border-[#2a2d2a] shadow-[0_4px_0_0_#0a0d0c] hover:border-[#d4ff00] hover:text-[#d4ff00]'
+              }`}
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Link>
+            <button 
+              onClick={() => { const next = !isLightMode; setIsLightMode(next); localStorage.setItem('isLightMode', String(next)); }} 
+              className={`w-10 h-10 rounded-2xl flex items-center justify-center border-2 transition-all active:translate-y-[2px] active:shadow-none ${
+                isLightMode 
+                  ? 'bg-white text-slate-700 border-slate-200 shadow-[0_4px_0_0_#e2e8f0] hover:bg-slate-100' 
+                  : 'bg-[#1c1e1c] text-[#a0a0a0] border-[#2a2d2a] shadow-[0_4px_0_0_#0a0d0c] hover:text-white hover:border-[#d4ff00]'
+              }`}
+              title="Ganti Tema"
+            >
+              {isLightMode ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+            </button>
+          </header>
+
+          {/* Access Restricted Card */}
+          <div className={`rounded-3xl border-2 p-8 md:p-12 text-center max-w-2xl mx-auto transition-all ${
+            isLightMode 
+              ? 'bg-white border-slate-200 shadow-[0_10px_0_0_#e2e8f0]' 
+              : 'bg-[#1c1e1c] border-[#2a2d2a] shadow-[0_10px_0_0_#0a0d0c]'
+          }`}>
+            <div className={`w-20 h-20 rounded-3xl mx-auto flex items-center justify-center mb-6 border-2 ${
+              isLightMode ? 'bg-amber-50 border-amber-200 text-amber-600' : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+            }`}>
+              <Lock className="w-10 h-10" />
+            </div>
+
+            <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tight mb-3">
+              Akses Dibatasi — <span className={isLightMode ? "text-indigo-600" : "text-[#d4ff00]"}>Khusus Guru</span>
+            </h2>
+
+            <p className={`text-sm md:text-base leading-relaxed mb-8 max-w-lg mx-auto ${
+              isLightMode ? 'text-slate-600' : 'text-[#a0a0a0]'
+            }`}>
+              Sesuai kebijakan privasi data, fitur log evaluasi skor motorik hanya dapat diakses oleh guru yang telah login. Setiap guru memiliki privasi mandiri dan hanya dapat melihat data muridnya masing-masing.
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <button
+                onClick={() => setIsAuthModalOpen(true)}
+                className={`w-full sm:w-auto px-8 py-4 rounded-2xl font-black text-sm tracking-wide uppercase transition-all border-2 active:translate-y-[2px] active:shadow-none flex items-center justify-center gap-2 ${
+                  isLightMode 
+                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-700 shadow-[0_6px_0_0_#4338ca]' 
+                    : 'bg-[#d4ff00] hover:bg-[#b8de00] text-black border-[#b8de00] shadow-[0_6px_0_0_#9bb800]'
+                }`}
+              >
+                <LogIn className="w-4 h-4" /> Login Akun Guru
+              </button>
+
+              <Link
+                href="/"
+                className={`w-full sm:w-auto px-6 py-4 rounded-2xl font-bold text-sm transition-all border-2 active:translate-y-[2px] active:shadow-none flex items-center justify-center gap-2 ${
+                  isLightMode
+                    ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
+                    : 'bg-white/5 hover:bg-white/10 text-white border-white/10'
+                }`}
+              >
+                Kembali ke Beranda
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        <TeacherAuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
+          onSuccess={() => {}}
+          isLightMode={isLightMode}
+        />
+      </main>
+    );
+  }
 
   return (
     <main className={`min-h-screen font-sans px-6 py-12 md:px-12 md:py-16 transition-colors duration-300 ${
@@ -195,7 +305,7 @@ export default function ScoreLogPage() {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-xl md:text-2xl font-black uppercase tracking-tight">
-                  Evaluasi Skor <span className={isLightMode ? "text-indigo-600" : "text-[#d4ff00]"}>Murid</span>
+                  Evaluasi Skor <span className={isLightMode ? "text-indigo-600" : "text-[#d4ff00]"}>Murid Saya</span>
                 </h1>
                 {teacher && (
                   <span className={`px-3 py-1 rounded-full text-xs font-bold border-2 flex items-center gap-1.5 ${
@@ -206,7 +316,7 @@ export default function ScoreLogPage() {
                 )}
               </div>
               <p className={`text-xs font-semibold mt-0.5 ${isLightMode ? 'text-slate-500' : 'text-[#a0a0a0]'}`}>
-                {teacher ? `Terhubung sebagai ${teacher.name} (${teacher.school_name || 'SLB TUNAS KASIH'})` : 'Rekam data evaluasi permainan sensor gerak'}
+                {teacher ? `Data evaluasi privat Guru: ${teacher.name} (${teacher.school_name || 'SLB TUNAS KASIH'})` : 'Rekam data evaluasi permainan sensor gerak'}
               </p>
             </div>
           </div>
@@ -272,7 +382,7 @@ export default function ScoreLogPage() {
             </button>
 
             <button 
-              onClick={fetchLogs} 
+              onClick={() => fetchLogs()} 
               className={`w-10 h-10 rounded-2xl flex items-center justify-center border-2 transition-all active:translate-y-[2px] active:shadow-none ${
                 isLightMode 
                   ? 'bg-white text-slate-700 border-slate-200 shadow-[0_4px_0_0_#e2e8f0] hover:bg-slate-100' 
@@ -357,31 +467,15 @@ export default function ScoreLogPage() {
               />
             </div>
 
-            {/* Filter Mode Switcher if teacher logged in */}
+            {/* Teacher Badge Indicator */}
             {teacher && (
-              <div className={`flex items-center p-1 rounded-2xl border-2 ${
-                isLightMode ? 'bg-slate-100 border-slate-200' : 'bg-[#0a0d0c] border-[#2a2d2a]'
+              <div className={`flex items-center gap-1.5 px-3 py-2 rounded-2xl border-2 shrink-0 text-xs font-bold ${
+                isLightMode 
+                  ? 'bg-indigo-50 border-indigo-200 text-indigo-700' 
+                  : 'bg-[#1c1e1c] border-[#d4ff00]/40 text-[#d4ff00]'
               }`}>
-                <button
-                  onClick={() => setFilterMode("all")}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border-2 ${
-                    filterMode === "all"
-                      ? isLightMode ? "bg-indigo-600 text-white border-indigo-600 shadow-[0_2px_0_0_#4338ca]" : "bg-[#d4ff00] text-black border-[#d4ff00] shadow-[0_2px_0_0_#9bb800]"
-                      : "text-[#a0a0a0] border-transparent hover:text-white"
-                  }`}
-                >
-                  Semua Log
-                </button>
-                <button
-                  onClick={() => setFilterMode("my_students")}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border-2 ${
-                    filterMode === "my_students"
-                      ? isLightMode ? "bg-indigo-600 text-white border-indigo-600 shadow-[0_2px_0_0_#4338ca]" : "bg-[#d4ff00] text-black border-[#d4ff00] shadow-[0_2px_0_0_#9bb800]"
-                      : "text-[#a0a0a0] border-transparent hover:text-white"
-                  }`}
-                >
-                  <UserCheck className="w-3.5 h-3.5" /> Murid Saya
-                </button>
+                <UserCheck className="w-3.5 h-3.5" />
+                <span>Khusus Murid: {teacher.name}</span>
               </div>
             )}
           </div>

@@ -603,6 +603,11 @@ export async function saveGameScore(
     return { success: false, error: 'Konfigurasi Supabase tidak lengkap di server.' };
   }
 
+  // Kebijakan Privasi: Yang tidak login tidak bisa menyimpan data game
+  if (!teacherId || !teacherId.trim()) {
+    return { success: false, error: 'Penyimpanan data skor hanya diizinkan untuk guru yang telah login.' };
+  }
+
   const supabaseServer = createClient(supabaseUrl, supabaseServiceRoleKey);
 
   try {
@@ -610,22 +615,17 @@ export async function saveGameScore(
     const finalSchool = schoolName || 'SLB TUNAS KASIH SURABAYA';
 
     // Cek apakah record dengan player_name, teacher_id, dan game_type yang sama sudah ada
-    let existingQuery = supabaseServer
+    const existingQuery = supabaseServer
       .from('game_scores')
       .select('id, score')
       .eq('player_name', finalPlayerName)
-      .eq('game_type', gameType);
-
-    if (teacherId) {
-      existingQuery = existingQuery.eq('teacher_id', teacherId);
-    } else {
-      existingQuery = existingQuery.is('teacher_id', null);
-    }
+      .eq('game_type', gameType)
+      .eq('teacher_id', teacherId);
 
     const { data: existingRecords } = await existingQuery.limit(1);
 
     if (existingRecords && existingRecords.length > 0) {
-      // UPDATE record yang ada
+      // UPDATE record murid guru yang bersangkutan
       const existingId = existingRecords[0].id;
       const updatePayload: any = {
         score: Math.max(0, Math.round(score)),
@@ -640,6 +640,7 @@ export async function saveGameScore(
         .from('game_scores')
         .update(updatePayload)
         .eq('id', existingId)
+        .eq('teacher_id', teacherId)
         .select();
 
       if (error) {
@@ -649,16 +650,16 @@ export async function saveGameScore(
 
       return { success: true, data, message: "Skor berhasil diperbarui!" };
     } else {
-      // INSERT record baru jika belum ada
+      // INSERT record baru khusus untuk guru yang sedang login
       const insertPayload: any = {
         player_name: finalPlayerName,
         game_type: gameType,
         score: Math.max(0, Math.round(score)),
         age: age || null,
         school: finalSchool,
+        teacher_id: teacherId,
         created_at: new Date().toISOString()
       };
-      if (teacherId) insertPayload.teacher_id = teacherId;
       if (screenshotUrl) insertPayload.screenshot_url = screenshotUrl;
       if (duration !== undefined && duration !== null) insertPayload.duration = duration.toString();
 
@@ -755,20 +756,20 @@ export async function getGameScores(teacherId?: string) {
     return { success: false, error: 'Konfigurasi Supabase tidak lengkap di server.' };
   }
 
+  // Kebijakan Privasi: Yang tidak login tidak bisa melihat log skor murid
+  if (!teacherId || !teacherId.trim()) {
+    return { success: false, error: 'Akses ditolak: Hanya guru yang telah login yang dapat melihat data skor.' };
+  }
+
   const supabaseServer = createClient(supabaseUrl, supabaseServiceRoleKey);
 
   try {
-    let query = supabaseServer
+    const { data, error } = await supabaseServer
       .from('game_scores')
       .select('*, teachers(name, school_name)')
+      .eq('teacher_id', teacherId)
       .order('created_at', { ascending: false })
       .limit(100);
-
-    if (teacherId) {
-      query = query.eq('teacher_id', teacherId);
-    }
-
-    const { data, error } = await query;
 
     if (error) {
       console.error("Server Action Supabase Select Error:", error);
@@ -782,9 +783,14 @@ export async function getGameScores(teacherId?: string) {
   }
 }
 
-export async function getTopScoresByGame(gameType: string, limit = 5) {
+export async function getTopScoresByGame(gameType: string, limit = 5, teacherId?: string) {
   if (!supabaseUrl || !supabaseServiceRoleKey) {
     return { success: false, error: 'Konfigurasi Supabase tidak lengkap di server.' };
+  }
+
+  // Tidak ada leaderboard global! Hanya mengambil skor murid milik guru yang login
+  if (!teacherId || !teacherId.trim()) {
+    return { success: false, error: 'Harus login sebagai guru untuk melihat peringkat murid.' };
   }
 
   const supabaseServer = createClient(supabaseUrl, supabaseServiceRoleKey);
@@ -794,6 +800,7 @@ export async function getTopScoresByGame(gameType: string, limit = 5) {
       .from('game_scores')
       .select('player_name, score, created_at')
       .eq('game_type', gameType)
+      .eq('teacher_id', teacherId)
       .order('score', { ascending: false })
       .order('created_at', { ascending: true }) // If tie, older gets higher
       .limit(limit);
@@ -807,7 +814,7 @@ export async function getTopScoresByGame(gameType: string, limit = 5) {
     const formattedData = data.map(d => ({
       name: d.player_name,
       score: d.score,
-      date: new Date(d.created_at).toLocaleDateString()
+      date: new Date(d.created_at).toLocaleDateString('id-ID')
     }));
 
     return { success: true, data: formattedData };
@@ -817,19 +824,23 @@ export async function getTopScoresByGame(gameType: string, limit = 5) {
   }
 }
 
-export async function getLeaderboards() {
+export async function getLeaderboards(teacherId?: string) {
+  if (!teacherId || !teacherId.trim()) {
+    return { success: false, error: 'Harus login sebagai guru untuk melihat papan peringkat murid.' };
+  }
+
   const [endless, heli, basket] = await Promise.all([
-    getTopScoresByGame('endless_runner'),
-    getTopScoresByGame('heli_runner'),
-    getTopScoresByGame('basket_shoot')
+    getTopScoresByGame('endless_runner', 5, teacherId),
+    getTopScoresByGame('heli_runner', 5, teacherId),
+    getTopScoresByGame('basket_shoot', 5, teacherId)
   ]);
 
   return {
     success: true,
     data: {
-      endless: endless.success ? endless.data : [],
-      heli: heli.success ? heli.data : [],
-      basket: basket.success ? basket.data : []
+      endless: endless.success && endless.data ? endless.data : [],
+      heli: heli.success && heli.data ? heli.data : [],
+      basket: basket.success && basket.data ? basket.data : []
     }
   };
 }

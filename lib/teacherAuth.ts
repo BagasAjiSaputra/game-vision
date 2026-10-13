@@ -23,6 +23,8 @@ export function setStoredTeacher(user: TeacherUser | null): void {
   } else {
     localStorage.removeItem(STORAGE_KEY);
   }
+  // Dispatch event so other components immediately react
+  window.dispatchEvent(new Event("teacher-auth-changed"));
 }
 
 export function useTeacherAuth() {
@@ -30,18 +32,28 @@ export function useTeacherAuth() {
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    setTeacher(getStoredTeacher());
+    const syncTeacher = () => {
+      setTeacher(getStoredTeacher());
+    };
+    syncTeacher();
     setIsLoaded(true);
+
+    window.addEventListener("storage", syncTeacher);
+    window.addEventListener("teacher-auth-changed", syncTeacher);
+    return () => {
+      window.removeEventListener("storage", syncTeacher);
+      window.removeEventListener("teacher-auth-changed", syncTeacher);
+    };
   }, []);
 
   const login = (user: TeacherUser) => {
-    setTeacher(user);
     setStoredTeacher(user);
+    setTeacher(user);
   };
 
   const logout = () => {
-    setTeacher(null);
     setStoredTeacher(null);
+    setTeacher(null);
   };
 
   return { teacher, isLoaded, login, logout };
